@@ -1,0 +1,254 @@
+.hero-3d {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 2rem 0;
+  position: relative;
+  background: var(--background);
+  overflow: hidden;
+}
+
+.hero-3d::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at left,
+    rgba(255, 77, 46, 0.15) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+}
+
+.hero-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+  width: 100%;
+}
+
+/* Left Side - 3D Model */
+.hero-left {
+  position: relative;
+  height: 700px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-wrapper {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  position: relative;
+}
+
+.canvas-wrapper::after {
+  display: none;
+}
+
+.loading-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.2em;
+}
+
+/* Right Side - Text */
+.hero-right {
+  z-index: 10;
+  padding: 2rem 0;
+}
+
+.telemetry-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(26, 27, 34, 0.8);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: var(--rounded);
+  margin-bottom: 2rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tertiary);
+}
+
+.hero-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.hero-title .headline-lg {
+  color: var(--tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.hero-quote {
+  max-width: 500px;
+  margin-bottom: 3rem;
+  color: var(--on-surface-variant);
+  line-height: 1.8;
+}
+
+.hero-metrics {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 3rem;
+  padding: 2rem;
+  background: rgba(18, 19, 26, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--rounded-lg);
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.metric-value {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.05em;
+}
+
+.metric-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.metric-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.hero-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  background: var(--primary);
+  color: var(--background);
+  border: none;
+  border-radius: var(--rounded);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-primary:hover {
+  background: #fff;
+  box-shadow: 0 0 30px rgba(255, 77, 46, 0.6);
+  transform: translateY(-2px);
+}
+
+.btn-icon {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* Animations */
+@keyframes hologram-scan {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(50px);
+  }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .hero-container {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+
+  .hero-left {
+    height: 500px;
+    order: 2;
+  }
+
+  .hero-right {
+    order: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-3d {
+    padding: 1rem 0;
+  }
+
+  .hero-left {
+    height: 400px;
+  }
+
+  .hero-title .display-xl {
+    font-size: 40px;
+    line-height: 44px;
+  }
+
+  .hero-title .headline-lg {
+    font-size: 24px;
+    line-height: 30px;
+  }
+
+  .hero-metrics {
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.5rem;
+  }
+
+  .metric-divider {
+    display: none;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+  }
+
+  .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+}
