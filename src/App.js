@@ -179,6 +179,21 @@ function App() {
     } else if (page === 'products') {
       setCategoryFilter('all');
       setCurrentPage('products');
+    } else if (page === 'running') {
+      setCategoryFilter('running');
+      setCurrentPage('running');
+    } else if (page === 'training') {
+      setCategoryFilter('training');
+      setCurrentPage('training');
+    } else if (page === 'trail') {
+      setCategoryFilter('trail');
+      setCurrentPage('trail');
+    } else if (page === 'racing') {
+      setCategoryFilter('racing');
+      setCurrentPage('racing');
+    } else if (page === 'new-arrivals') {
+      setCategoryFilter('new');
+      setCurrentPage('new-arrivals');
     }
   };
 
@@ -268,6 +283,56 @@ function App() {
           subtitle="Performance footwear at special prices. Limited time offers on premium athletic shoes."
           categoryFilter="all"
           saleMode={true}
+          onAddToCart={handleAddToCart}
+          onProductClick={handleProductClick}
+        />
+      )}
+
+      {currentPage === 'running' && (
+        <CollectionPage 
+          title="RUNNING"
+          subtitle="Running footwear collection. Engineered for speed, endurance, and peak performance on every run."
+          categoryFilter="running"
+          onAddToCart={handleAddToCart}
+          onProductClick={handleProductClick}
+        />
+      )}
+
+      {currentPage === 'training' && (
+        <CollectionPage 
+          title="TRAINING"
+          subtitle="Training footwear collection. Built for versatility, stability, and power across all workout disciplines."
+          categoryFilter="training"
+          onAddToCart={handleAddToCart}
+          onProductClick={handleProductClick}
+        />
+      )}
+
+      {currentPage === 'trail' && (
+        <CollectionPage 
+          title="TRAIL"
+          subtitle="Trail running collection. Rugged performance footwear designed for off-road adventures and challenging terrain."
+          categoryFilter="trail"
+          onAddToCart={handleAddToCart}
+          onProductClick={handleProductClick}
+        />
+      )}
+
+      {currentPage === 'racing' && (
+        <CollectionPage 
+          title="RACING"
+          subtitle="Racing footwear collection. Ultra-lightweight performance shoes engineered for competition and personal records."
+          categoryFilter="racing"
+          onAddToCart={handleAddToCart}
+          onProductClick={handleProductClick}
+        />
+      )}
+
+      {currentPage === 'new-arrivals' && (
+        <CollectionPage 
+          title="NEW ARRIVALS"
+          subtitle="Latest footwear innovations. Discover the newest additions to the KINETIC // STRIDE performance collection."
+          categoryFilter="new"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
         />

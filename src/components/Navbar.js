@@ -25,15 +25,15 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
       <div className="announcement-bar">
         <div className="announcement-content">
           <span className="announcement-text">
-            🚀 NEW COLLECTION LAUNCH: Get 20% OFF with code LAUNCH20 
+            🎉 FREE SHIPPING ON ORDERS ABOVE ₹999
           </span>
           <span className="announcement-divider">|</span>
           <span className="announcement-text">
-            🚚 FREE SHIPPING on orders $180+ 
+            🔄 EASY RETURNS
           </span>
           <span className="announcement-divider">|</span>
           <span className="announcement-text">
-            ↩️ Easy 30-Day Returns
+            🔒 SECURE CHECKOUT
           </span>
         </div>
       </div>
@@ -53,45 +53,52 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
           <div className={`navbar-center ${menuOpen ? 'open' : ''}`}>
             <div className="navbar-menu">
               <button 
-                className={`nav-link ${currentPage === 'home' ? 'active' : ''}`}
-                onClick={() => handleNavClick('home')}
-              >
-                Home
-              </button>
-              <div className="nav-dropdown">
-                <button 
-                  className={`nav-link dropdown-toggle ${currentPage === 'shop' ? 'active' : ''}`}
-                  onClick={() => handleNavClick('shop')}
-                >
-                  Shop
-                  <span className="dropdown-arrow">▼</span>
-                </button>
-                <div className="dropdown-menu">
-                  <button onClick={() => handleNavClick('shop')}>All Footwear</button>
-                  <button onClick={() => handleNavClick('men')}>Men's Collection</button>
-                  <button onClick={() => handleNavClick('women')}>Women's Collection</button>
-                  <div className="dropdown-divider"></div>
-                  <button onClick={() => handleNavClick('shop')}>New Arrivals</button>
-                  <button onClick={() => handleNavClick('shop')}>Best Sellers</button>
-                </div>
-              </div>
-              <button 
                 className={`nav-link ${currentPage === 'men' ? 'active' : ''}`}
                 onClick={() => handleNavClick('men')}
               >
-                Men
+                MEN
               </button>
               <button 
                 className={`nav-link ${currentPage === 'women' ? 'active' : ''}`}
                 onClick={() => handleNavClick('women')}
               >
-                Women
+                WOMEN
+              </button>
+              <button 
+                className={`nav-link ${currentPage === 'running' ? 'active' : ''}`}
+                onClick={() => handleNavClick('running')}
+              >
+                RUNNING
+              </button>
+              <button 
+                className={`nav-link ${currentPage === 'training' ? 'active' : ''}`}
+                onClick={() => handleNavClick('training')}
+              >
+                TRAINING
+              </button>
+              <button 
+                className={`nav-link ${currentPage === 'trail' ? 'active' : ''}`}
+                onClick={() => handleNavClick('trail')}
+              >
+                TRAIL
+              </button>
+              <button 
+                className={`nav-link ${currentPage === 'racing' ? 'active' : ''}`}
+                onClick={() => handleNavClick('racing')}
+              >
+                RACING
+              </button>
+              <button 
+                className={`nav-link ${currentPage === 'new-arrivals' ? 'active' : ''}`}
+                onClick={() => handleNavClick('new-arrivals')}
+              >
+                NEW ARRIVALS
               </button>
               <button 
                 className={`nav-link ${currentPage === 'sale' ? 'active' : ''}`}
                 onClick={() => handleNavClick('sale')}
               >
-                Sale
+                SALE
               </button>
             </div>
           </div>
@@ -104,7 +111,9 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
               onClick={() => setSearchOpen(!searchOpen)}
               title="Search"
             >
-              🔍
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 21L16.514 16.506L21 21ZM19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </button>
 
             {userType === 'user' && (
@@ -115,7 +124,9 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
                   onClick={() => handleNavClick('wishlist')} 
                   title="Wishlist"
                 >
-                  <span className="action-icon">♡</span>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20.84 4.61C20.3292 4.099 19.7228 3.69364 19.0554 3.41708C18.3879 3.14052 17.6725 2.99817 16.95 2.99817C16.2275 2.99817 15.5121 3.14052 14.8446 3.41708C14.1772 3.69364 13.5708 4.099 13.06 4.61L12 5.67L10.94 4.61C9.9083 3.5783 8.50903 2.9987 7.05 2.9987C5.59096 2.9987 4.19169 3.5783 3.16 4.61C2.1283 5.6417 1.5487 7.041 1.5487 8.5C1.5487 9.959 2.1283 11.3583 3.16 12.39L4.22 13.45L12 21.23L19.78 13.45L20.84 12.39C21.351 11.8792 21.7563 11.2728 22.0329 10.6053C22.3095 9.9379 22.4518 9.2225 22.4518 8.5C22.4518 7.7775 22.3095 7.0621 22.0329 6.3946C21.7563 5.7272 21.351 5.1208 20.84 4.61Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                   {wishlistCount > 0 && <span className="action-badge">{wishlistCount}</span>}
                 </button>
 
@@ -125,7 +136,11 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
                   onClick={() => handleNavClick('cart')} 
                   title="Shopping Bag"
                 >
-                  <span className="action-icon">🛍️</span>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 2L3 6V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V6L18 2H6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M3 6H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M16 10C16 12.2091 14.2091 14 12 14C9.79086 14 8 12.2091 8 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                   {cartCount > 0 && <span className="action-badge">{cartCount}</span>}
                 </button>
               </>
@@ -134,7 +149,10 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
             {/* User Menu */}
             <div className="nav-user-menu">
               <button className="nav-action-btn user-btn" title="Account">
-                👤
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </button>
               <div className="user-dropdown">
                 <div className="user-info">
