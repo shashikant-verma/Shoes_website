@@ -6,12 +6,13 @@ import Login from './components/Login';
 import Navbar from './components/Navbar';
 import HomePage from './components/HomePage';
 import ProductShowcase from './components/ProductShowcase';
+import CollectionPage from './components/CollectionPage';
 import ProductDetail from './components/ProductDetail';
 import Cart from './components/Cart';
 import Wishlist from './components/Wishlist';
 import OrderHistory from './components/OrderHistory';
 import Footer from './components/Footer';
-import { initializeAdmin, initializeDemoProducts, initializeDemoUser, initializeDemoOrders } from './utils/initializeAdmin';
+import authService from './services/authService';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -24,84 +25,79 @@ function App() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [wishlist, setWishlist] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeAdmin();
-    initializeDemoUser();
-    initializeDemoProducts();
+    const initializeApp = async () => {
+      const path = window.location.pathname;
+      setIsAdminRoute(path === '/admin');
 
-    const path = window.location.pathname;
-    setIsAdminRoute(path === '/admin');
-
-    const savedAuth = localStorage.getItem('auth');
-    if (savedAuth) {
-      const authData = JSON.parse(savedAuth);
-      if ((path === '/admin' && authData.userType === 'admin') || 
-          (path !== '/admin' && authData.userType === 'user')) {
-        setIsAuthenticated(true);
-        setUserType(authData.userType);
-        setCurrentUser(authData.user);
+      // Check if user is already authenticated
+      if (authService.isAuthenticated()) {
+        const user = authService.getCurrentUser();
+        const userTypeFromStorage = JSON.parse(localStorage.getItem('auth'))?.userType;
         
-        if (authData.userType === 'user') {
-          // Initialize demo orders for user
-          initializeDemoOrders(authData.user.id);
+        // Verify token is still valid
+        const profileResult = await authService.getProfile();
+        if (profileResult.success) {
+          setIsAuthenticated(true);
+          setUserType(userTypeFromStorage);
+          setCurrentUser(user);
           
-          const savedCart = localStorage.getItem(`cart-${authData.user.id}`);
-          if (savedCart) {
-            setCart(JSON.parse(savedCart));
+          if (userTypeFromStorage === 'user') {
+            // Load user-specific data from localStorage
+            loadUserData(user.id);
           }
-          
-          const savedWishlist = localStorage.getItem(`wishlist-${authData.user.id}`);
-          if (savedWishlist) {
-            setWishlist(JSON.parse(savedWishlist));
-          }
-
-          const savedOrders = localStorage.getItem(`orders-${authData.user.id}`);
-          if (savedOrders) {
-            setOrders(JSON.parse(savedOrders));
-          }
+        } else {
+          // Token expired or invalid
+          authService.clearAuth();
         }
-      } else {
-        localStorage.removeItem('auth');
       }
-    }
+      setLoading(false);
+    };
+
+    initializeApp();
   }, []);
+
+  const loadUserData = (userId) => {
+    // Load cart from localStorage (temporary storage)
+    const savedCart = localStorage.getItem(`cart-${userId}`);
+    if (savedCart) {
+      setCart(JSON.parse(savedCart));
+    }
+    
+    // Load wishlist from localStorage (temporary storage)
+    const savedWishlist = localStorage.getItem(`wishlist-${userId}`);
+    if (savedWishlist) {
+      setWishlist(JSON.parse(savedWishlist));
+    }
+
+    // Load orders from localStorage (temporary storage)
+    const savedOrders = localStorage.getItem(`orders-${userId}`);
+    if (savedOrders) {
+      setOrders(JSON.parse(savedOrders));
+    }
+  };
 
   const handleLogin = (user, type) => {
     setIsAuthenticated(true);
     setUserType(type);
     setCurrentUser(user);
-    localStorage.setItem('auth', JSON.stringify({ userType: type, user }));
     
     if (type === 'user') {
-      // Initialize demo orders for user on login
-      initializeDemoOrders(user.id);
-      
-      const savedCart = localStorage.getItem(`cart-${user.id}`);
-      if (savedCart) {
-        setCart(JSON.parse(savedCart));
-      }
-      
-      const savedWishlist = localStorage.getItem(`wishlist-${user.id}`);
-      if (savedWishlist) {
-        setWishlist(JSON.parse(savedWishlist));
-      }
-
-      const savedOrders = localStorage.getItem(`orders-${user.id}`);
-      if (savedOrders) {
-        setOrders(JSON.parse(savedOrders));
-      }
+      loadUserData(user.id);
     }
   };
 
   const handleLogout = () => {
+    authService.clearAuth();
     setIsAuthenticated(false);
     setUserType(null);
     setCurrentUser(null);
     setCart([]);
     setWishlist([]);
     setOrders([]);
-    localStorage.removeItem('auth');
+    
     if (isAdminRoute) {
       window.location.pathname = '/admin';
     } else {
@@ -170,12 +166,19 @@ function App() {
     setCurrentPage(page);
     if (page === 'men') {
       setCategoryFilter('men');
-      setCurrentPage('products');
+      setCurrentPage('men');
     } else if (page === 'women') {
       setCategoryFilter('women');
-      setCurrentPage('products');
+      setCurrentPage('women');
+    } else if (page === 'sale') {
+      setCategoryFilter('all');
+      setCurrentPage('sale');
+    } else if (page === 'shop') {
+      setCategoryFilter('all');
+      setCurrentPage('shop');
     } else if (page === 'products') {
       setCategoryFilter('all');
+      setCurrentPage('products');
     }
   };
 
@@ -186,6 +189,18 @@ function App() {
   const handleCloseDetail = () => {
     setSelectedProduct(null);
   };
+
+  if (loading) {
+    return (
+      <div className="App">
+        <div className="loading-container">
+          <div className="loading-spinner">⚡</div>
+          <h2>KINETIC // STRIDE</h2>
+          <p>Initializing Application...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Login onLogin={handleLogin} isAdmin={isAdminRoute} />;
@@ -209,10 +224,51 @@ function App() {
       
       {currentPage === 'home' && <HomePage onPageChange={handlePageChange} />}
       
+      {currentPage === 'shop' && (
+        <CollectionPage 
+          title="SHOP"
+          subtitle="Explore the complete KINETIC // STRIDE footwear collection. All footwear designed for running, racing, training and everyday performance."
+          categoryFilter="all"
+          onAddToCart={handleAddToCart}
+          onProductClick={handleProductClick}
+        />
+      )}
+      
       {currentPage === 'products' && (
         <ProductShowcase 
           onAddToCart={handleAddToCart} 
           categoryFilter={categoryFilter}
+          onProductClick={handleProductClick}
+        />
+      )}
+
+      {currentPage === 'men' && (
+        <CollectionPage 
+          title="MEN"
+          subtitle="Men's Footwear Collection. Explore performance footwear designed for running, racing, training and everyday movement."
+          categoryFilter="men"
+          onAddToCart={handleAddToCart}
+          onProductClick={handleProductClick}
+        />
+      )}
+
+      {currentPage === 'women' && (
+        <CollectionPage 
+          title="WOMEN"
+          subtitle="Women's Footwear Collection. Explore performance and lifestyle footwear designed for everyday movement."
+          categoryFilter="women"
+          onAddToCart={handleAddToCart}
+          onProductClick={handleProductClick}
+        />
+      )}
+
+      {currentPage === 'sale' && (
+        <CollectionPage 
+          title="SALE"
+          subtitle="Performance footwear at special prices. Limited time offers on premium athletic shoes."
+          categoryFilter="all"
+          saleMode={true}
+          onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
         />
       )}
