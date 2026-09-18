@@ -7,7 +7,8 @@ function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWis
   const specs = product.specs || {};
   const features = product.features || [];
 
-  const sizes = ['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12'];
+  const sizes = product.sizes || [];
+  const colors = product.colors || [];
 
   const handleAddToCart = () => {
     if (!selectedSize) {
@@ -56,7 +57,13 @@ function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWis
                 </span>
                 <h1 className="headline-lg">{product.name}</h1>
                 <p className="product-detail-price">
-                  <span className="price-large">${product.price.toFixed(2)}</span>
+                  <span className="price-large">₹{Number(product.price || 0).toLocaleString()}</span>
+                  {product.originalPrice && (
+                    <>
+                      <span className="original-price">₹{Number(product.originalPrice).toLocaleString()}</span>
+                      <span className="discount-badge">{product.discount}% OFF</span>
+                    </>
+                  )}
                 </p>
               </div>
               <button 
@@ -126,6 +133,15 @@ function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWis
                 ))}
               </div>
             </div>
+
+            {colors.length > 0 && (
+              <div className="color-selection">
+                <h3 className="headline-md">Color</h3>
+                <div className="product-colors">
+                  {colors.map((color) => <span key={color} className="color-chip">{color}</span>)}
+                </div>
+              </div>
+            )}
 
             {/* Quantity */}
             <div className="quantity-section">

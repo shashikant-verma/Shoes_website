@@ -24,6 +24,9 @@ function ProductShowcase({ onAddToCart, categoryFilter, onProductClick }) {
     try {
       const result = await productService.getProducts({
         status: 'active',
+        collectionName: ['accessories', 'ozark'].includes(categoryFilter)
+          ? categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1)
+          : undefined,
         limit: 50
       });
       
@@ -34,7 +37,15 @@ function ProductShowcase({ onAddToCart, categoryFilter, onProductClick }) {
           name: product.name,
           image: product.image,
           category: product.category,
+          collectionName: (product.collectionName || product.productType || '').toLowerCase(),
+          brand: product.brand,
+          productType: product.productType,
           price: product.price,
+          originalPrice: product.originalPrice,
+          discount: product.discount,
+          images: product.images || [product.image],
+          sizes: product.sizes || [],
+          colors: product.colors || [],
           specs: {
             weight: product.specifications?.weight || 'N/A',
             drop: product.specifications?.drop || 'N/A',
@@ -67,7 +78,9 @@ function ProductShowcase({ onAddToCart, categoryFilter, onProductClick }) {
 
   // Filter by category
   if (selectedCategory !== 'all') {
-    filteredProducts = filteredProducts.filter(p => p.category === selectedCategory);
+    filteredProducts = ['accessories', 'ozark'].includes(selectedCategory)
+      ? filteredProducts.filter(p => p.collectionName === selectedCategory)
+      : filteredProducts.filter(p => p.category === selectedCategory);
   }
 
   // Filter by search query

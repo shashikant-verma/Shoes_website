@@ -68,20 +68,25 @@ function CollectionPage({
           name: product.name,
           image: product.image,
           category: product.category,
+          brand: product.brand,
+          productType: product.productType,
           price: product.price,
+          originalPrice: product.originalPrice,
+          discount: product.discount,
+          images: product.images || [product.image],
+          sizes: product.sizes || [],
+          colors: product.colors || [],
           specs: {
             weight: product.specifications?.weight || 'N/A',
             drop: product.specifications?.drop || 'N/A',
             energy: product.specifications?.energy || 'N/A'
           },
-          originalPrice: product.originalPrice,
-          discount: product.discount,
           stock: product.stock || 0,
           description: product.description,
           features: product.features || [],
           badge: product.badge || 'NEW',
           badgeColor: product.badgeColor || 'primary',
-          rating: product.rating || 4.5,
+          rating: product.rating || 0,
           reviews: product.reviewCount || 0,
           featured: product.featured || false,
           isNew: product.isNew || false,
@@ -151,6 +156,10 @@ function CollectionPage({
     // For sale mode, prioritize sale items
     if (saleMode) {
       filtered = filtered.filter(p => p.onSale || p.originalPrice || p.discount);
+    }
+
+    if (categoryFilter === 'new-arrivals') {
+      filtered = filtered.filter(p => p.isNew);
     }
 
     // Sort products
@@ -390,6 +399,9 @@ function CollectionPage({
                     <div className="product-info">
                       <div className="product-category">{product.category?.toUpperCase()}</div>
                       <h3 className="product-name">{product.name}</h3>
+                      <p className="product-description">
+                        {product.description || 'Thoughtfully designed footwear for everyday movement and style.'}
+                      </p>
                       
                       {/* Rating */}
                       <div className="product-rating">

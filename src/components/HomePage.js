@@ -168,9 +168,12 @@ function HomePage({ onPageChange }) {
                       <span className="rating-count">({product.reviews || 0})</span>
                     </div>
                     <div className="product-price">
-                      <span className="current-price">${product.price.toFixed(2)}</span>
+                      <span className="current-price">₹{Number(product.price || 0).toLocaleString()}</span>
                       {product.originalPrice && (
-                        <span className="original-price">${product.originalPrice.toFixed(2)}</span>
+                        <>
+                          <span className="original-price">₹{Number(product.originalPrice).toLocaleString()}</span>
+                          <span className="discount-badge">{product.discount}% OFF</span>
+                        </>
                       )}
                     </div>
                   </div>
@@ -235,7 +238,7 @@ function HomePage({ onPageChange }) {
               </div>
             </div>
 
-            <div className="category-card small" onClick={() => onPageChange('products')}>
+            <div className="category-card small" onClick={() => onPageChange('new-arrivals')}>
               <div className="category-image">
                 <img src="https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400" alt="New Arrivals" />
                 <div className="category-overlay">
@@ -247,7 +250,7 @@ function HomePage({ onPageChange }) {
               </div>
             </div>
 
-            <div className="category-card small" onClick={() => onPageChange('products')}>
+            <div className="category-card small" onClick={() => onPageChange('sale')}>
               <div className="category-image">
                 <img src="https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400" alt="Sale Items" />
                 <div className="category-overlay">

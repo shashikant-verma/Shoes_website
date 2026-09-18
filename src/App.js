@@ -180,6 +180,12 @@ function App() {
     } else if (page === 'products') {
       setCategoryFilter('all');
       setCurrentPage('products');
+    } else if (page === 'accessories') {
+      setCategoryFilter('accessories');
+      setCurrentPage('accessories');
+    } else if (page === 'ozark') {
+      setCategoryFilter('ozark');
+      setCurrentPage('ozark');
     } else if (page === 'running') {
       setCategoryFilter('running');
       setCurrentPage('running');
@@ -250,7 +256,7 @@ function App() {
         />
       )}
       
-      {currentPage === 'products' && (
+      {['products', 'accessories', 'ozark'].includes(currentPage) && (
         <ProductShowcase 
           onAddToCart={handleAddToCart} 
           categoryFilter={categoryFilter}

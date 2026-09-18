@@ -5,7 +5,6 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [megaMenu, setMegaMenu] = useState(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,7 +17,6 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
   const handleNavClick = (page) => {
     onPageChange(page);
     setMenuOpen(false);
-    setMegaMenu(null);
   };
 
   return (
@@ -58,18 +56,15 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
                 <div
                   key={category}
                   className="nav-menu-group"
-                  onMouseEnter={() => setMegaMenu(category)}
-                  onMouseLeave={() => setMegaMenu(null)}
                 >
                   <button
                     className={`nav-link ${currentPage === category ? 'active' : ''}`}
                     onClick={() => handleNavClick(category)}
-                    onFocus={() => setMegaMenu(category)}
-                    aria-expanded={megaMenu === category}
+                    aria-haspopup="true"
                   >
                     {category.toUpperCase()}
                   </button>
-                  <div className={`mega-menu ${megaMenu === category ? 'open' : ''}`}>
+                  <div className="mega-menu">
                     <div className="mega-menu-column">
                       <span className="mega-menu-label">SHOP</span>
                       <button onClick={() => handleNavClick('products')}>All Shoes</button>
@@ -88,14 +83,14 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
                 </div>
               ))}
               <button 
-                className={`nav-link ${currentPage === 'products' ? 'active' : ''}`}
-                onClick={() => handleNavClick('products')}
+                className={`nav-link ${currentPage === 'accessories' ? 'active' : ''}`}
+                onClick={() => handleNavClick('accessories')}
               >
                 ACCESSORIES
               </button>
               <button 
-                className={`nav-link ${currentPage === 'products' ? 'active' : ''}`}
-                onClick={() => handleNavClick('products')}
+                className={`nav-link ${currentPage === 'ozark' ? 'active' : ''}`}
+                onClick={() => handleNavClick('ozark')}
               >
                 OZARK
               </button>

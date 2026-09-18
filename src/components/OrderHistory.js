@@ -90,7 +90,7 @@ function OrderHistory({ orders }) {
                       </div>
                     </div>
                     <div className="order-item-price">
-                      <span className="telemetry-metric">${(item.price * item.quantity).toFixed(2)}</span>
+                      <span className="telemetry-metric">₹{(item.price * item.quantity).toLocaleString()}</span>
                     </div>
                   </div>
                 ))}
@@ -100,22 +100,22 @@ function OrderHistory({ orders }) {
                 <div className="order-summary">
                   <div className="summary-row">
                     <span className="body-sm">Subtotal:</span>
-                    <span className="body-sm">${order.subtotal.toFixed(2)}</span>
+                    <span className="body-sm">₹{order.subtotal.toLocaleString()}</span>
                   </div>
                   {order.discount > 0 && (
                     <div className="summary-row discount-row">
                       <span className="body-sm">Discount:</span>
-                      <span className="body-sm">-${order.discount.toFixed(2)}</span>
+                      <span className="body-sm">-₹{order.discount.toLocaleString()}</span>
                     </div>
                   )}
                   <div className="summary-row">
                     <span className="body-sm">Shipping:</span>
-                    <span className="body-sm">${order.shipping.toFixed(2)}</span>
+                    <span className="body-sm">₹{order.shipping.toLocaleString()}</span>
                   </div>
                   <div className="summary-divider"></div>
                   <div className="summary-row summary-total">
                     <span className="headline-sm">Total:</span>
-                    <span className="order-total">${order.total.toFixed(2)}</span>
+                    <span className="order-total">₹{order.total.toLocaleString()}</span>
                   </div>
                 </div>
 

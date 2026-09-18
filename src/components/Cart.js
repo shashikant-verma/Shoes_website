@@ -38,7 +38,7 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser }) {
       alert('Your cart is empty!');
       return;
     }
-    alert(`🎉 Checkout complete!\n\nTotal: $${total.toFixed(2)}\n\nThank you for your order, ${currentUser.name}!`);
+    alert(`🎉 Checkout complete!\n\nTotal: ₹${total.toLocaleString()}\n\nThank you for your order, ${currentUser.name}!`);
   };
 
   if (cart.length === 0) {
@@ -125,7 +125,7 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser }) {
 
                     <div className="cart-item-price">
                       <span className="telemetry-label">PRICE</span>
-                      <span className="price-value">${(item.price * item.quantity).toFixed(2)}</span>
+                      <span className="price-value">₹{(item.price * item.quantity).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
@@ -170,13 +170,13 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser }) {
               <div className="summary-breakdown">
                 <div className="summary-row">
                   <span className="body-md">Subtotal</span>
-                  <span className="body-md">${subtotal.toFixed(2)}</span>
+                  <span className="body-md">₹{subtotal.toLocaleString()}</span>
                 </div>
 
                 {discount > 0 && (
                   <div className="summary-row discount-row">
                     <span className="body-md">Discount ({discount}%)</span>
-                    <span className="body-md">-${discountAmount.toFixed(2)}</span>
+                    <span className="body-md">-₹{discountAmount.toLocaleString()}</span>
                   </div>
                 )}
 
@@ -186,14 +186,14 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser }) {
                     {shipping === 0 ? (
                       <span className="free-shipping">FREE ✓</span>
                     ) : (
-                      `$${shipping.toFixed(2)}`
+                      `₹${shipping.toLocaleString()}`
                     )}
                   </span>
                 </div>
 
                 {shipping > 0 && (
                   <p className="shipping-notice telemetry-label">
-                    Add ${(180 - subtotal).toFixed(2)} more for FREE shipping
+                    Add ₹{(180 - subtotal).toLocaleString()} more for FREE shipping
                   </p>
                 )}
 
@@ -201,7 +201,7 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser }) {
 
                 <div className="summary-row summary-total">
                   <span className="headline-md">Total</span>
-                  <span className="total-price">${total.toFixed(2)}</span>
+                  <span className="total-price">₹{total.toLocaleString()}</span>
                 </div>
               </div>
 

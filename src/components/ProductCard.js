@@ -39,6 +39,9 @@ function ProductCard({ product, onProductClick, index = 0 }) {
       <div className="product-info">
         <span className="product-category">{product.category?.toUpperCase()}</span>
         <h3 className="product-name headline-md">{product.name}</h3>
+        <p className="product-description">
+          {product.description || 'Thoughtfully designed footwear for everyday movement and style.'}
+        </p>
 
         <div className="product-rating" aria-label={`${rating} out of 5 stars, ${reviewCount} reviews`}>
           <span className="rating-stars" aria-hidden="true">

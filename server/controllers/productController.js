@@ -9,6 +9,7 @@ const getProducts = async (req, res, next) => {
       category,
       status = 'active',
       featured,
+      collectionName,
       search,
       sort = 'createdAt',
       order = 'desc',
@@ -29,6 +30,10 @@ const getProducts = async (req, res, next) => {
     // Filter by category
     if (category && category !== 'all') {
       query.category = category;
+    }
+
+    if (collectionName) {
+      query.collectionName = collectionName;
     }
 
     // Filter by featured
