@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './ProductShowcase.css';
 import productService from '../services/productService';
+import ProductCard from './ProductCard';
+import ProductSkeleton from './ProductSkeleton';
 
 function ProductShowcase({ onAddToCart, categoryFilter, onProductClick }) {
   const [selectedCategory, setSelectedCategory] = useState(categoryFilter || 'all');
@@ -61,7 +63,7 @@ function ProductShowcase({ onAddToCart, categoryFilter, onProductClick }) {
     }
   };
   // Filter and sort products
-  let filteredProducts = products;
+  let filteredProducts = [...products];
 
   // Filter by category
   if (selectedCategory !== 'all') {
@@ -123,9 +125,9 @@ function ProductShowcase({ onAddToCart, categoryFilter, onProductClick }) {
       <section className="product-showcase" id="products">
         <div className="showcase-container">
           <div className="loading-state">
-            <div className="loading-spinner">⚡</div>
-            <h3 className="headline-md">Loading Products...</h3>
-            <p className="body-lg">Fetching the latest performance footwear</p>
+            <div className="products-grid skeleton-grid">
+              {[1, 2, 3, 4].map((item) => <ProductSkeleton key={item} />)}
+            </div>
           </div>
         </div>
       </section>
@@ -270,67 +272,12 @@ function ProductShowcase({ onAddToCart, categoryFilter, onProductClick }) {
         {filteredProducts.length > 0 ? (
           <div className="products-grid">
             {filteredProducts.map((product, index) => (
-              <div
+              <ProductCard
                 key={product.id}
-                className="product-card glass-panel fade-in-up"
-                style={{ animationDelay: `${index * 0.1}s` }}
-                onClick={() => onProductClick(product)}
-              >
-                <div className={`product-badge badge-${product.badgeColor}`}>
-                  <span className="telemetry-label">{product.badge}</span>
-                </div>
-
-                <div className="product-image-container">
-                  <img src={product.image} alt={product.name} className="product-image" />
-                </div>
-
-                <div className="product-info">
-                  <h3 className="product-name headline-md">{product.name}</h3>
-                  
-                  {/* Rating */}
-                  <div className="product-rating">
-                    <span className="rating-stars">{'⭐'.repeat(Math.floor(product.rating))}</span>
-                    <span className="rating-value telemetry-label">{product.rating} ({product.reviews})</span>
-                  </div>
-
-                  <p className="product-description body-sm">{product.description}</p>
-
-                  <div className="product-specs">
-                    <div className="spec-item">
-                      <span className="telemetry-label">WEIGHT</span>
-                      <span className="telemetry-metric">{product.specs.weight}</span>
-                    </div>
-                    <div className="spec-item">
-                      <span className="telemetry-label">DROP</span>
-                      <span className="telemetry-metric">{product.specs.drop}</span>
-                    </div>
-                    <div className="spec-item">
-                      <span className="telemetry-label">ENERGY</span>
-                      <span className="telemetry-metric">{product.specs.energy}</span>
-                    </div>
-                  </div>
-
-                  <div className="product-footer">
-                    <div className="product-price">
-                      <span className="telemetry-metric price-amount">${product.price.toFixed(2)}</span>
-                      <span className="telemetry-label stock-info">
-                        {product.stock} IN STOCK
-                      </span>
-                    </div>
-
-                    <button 
-                      className="btn-view-details"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onProductClick(product);
-                      }}
-                    >
-                      <span className="telemetry-label">VIEW DETAILS</span>
-                      <span className="btn-icon">→</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
+                product={product}
+                index={index}
+                onProductClick={onProductClick}
+              />
             ))}
           </div>
         ) : (

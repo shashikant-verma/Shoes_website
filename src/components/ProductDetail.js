@@ -4,6 +4,8 @@ import './ProductDetail.css';
 function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWishlist }) {
   const [selectedSize, setSelectedSize] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const specs = product.specs || {};
+  const features = product.features || [];
 
   const sizes = ['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12'];
 
@@ -34,7 +36,7 @@ function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWis
   return (
     <div className="product-detail-overlay" onClick={onClose}>
       <div className="product-detail-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="btn-close-modal" onClick={onClose}>✕</button>
+        <button className="btn-close-modal" onClick={onClose} aria-label="Close product details">✕</button>
         
         <div className="product-detail-content">
           {/* Left - Image */}
@@ -83,15 +85,15 @@ function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWis
               <div className="specs-grid">
                 <div className="spec-box">
                   <span className="telemetry-label">WEIGHT</span>
-                  <span className="telemetry-metric">{product.specs.weight}</span>
+                  <span className="telemetry-metric">{specs.weight || 'N/A'}</span>
                 </div>
                 <div className="spec-box">
                   <span className="telemetry-label">DROP</span>
-                  <span className="telemetry-metric">{product.specs.drop}</span>
+                  <span className="telemetry-metric">{specs.drop || 'N/A'}</span>
                 </div>
                 <div className="spec-box">
                   <span className="telemetry-label">ENERGY RETURN</span>
-                  <span className="telemetry-metric">{product.specs.energy}</span>
+                  <span className="telemetry-metric">{specs.energy || 'N/A'}</span>
                 </div>
               </div>
             </div>
@@ -100,7 +102,7 @@ function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWis
             <div className="product-features">
               <h3 className="headline-md">Key Features</h3>
               <ul className="features-list">
-                {product.features.map((feature, index) => (
+                {features.map((feature, index) => (
                   <li key={index} className="body-md">
                     <span className="feature-icon">✓</span>
                     {feature}

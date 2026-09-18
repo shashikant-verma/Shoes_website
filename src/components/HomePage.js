@@ -1,64 +1,45 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './HomePage.css';
+import productService from '../services/productService';
+import ProductSkeleton from './ProductSkeleton';
 
 function HomePage({ onPageChange }) {
   const carouselRef = useRef(null);
   const [isScrolling, setIsScrolling] = useState(false);
 
-  const featuredProducts = [
-    {
-      id: 'p1',
-      name: 'PHANTOM CARBON V4',
-      image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600',
-      price: 285.00,
-      originalPrice: 320.00,
-      badge: 'BESTSELLER',
-      badgeColor: 'primary'
-    },
-    {
-      id: 'p5',
-      name: 'AURORA SPRINT',
-      image: 'https://images.unsplash.com/photo-1515955656352-a1fa3ffcd111?w=600',
-      price: 265.00,
-      originalPrice: 295.00,
-      badge: 'NEW',
-      badgeColor: 'secondary'
-    },
-    {
-      id: 'p3',
-      name: 'VELOCITY ZERO',
-      image: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600',
-      price: 425.00,
-      badge: 'PREMIUM',
-      badgeColor: 'tertiary'
-    },
-    {
-      id: 'p7',
-      name: 'VORTEX ELITE',
-      image: 'https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=600',
-      price: 385.00,
-      originalPrice: 425.00,
-      badge: 'SALE',
-      badgeColor: 'primary'
-    },
-    {
-      id: 'p2',
-      name: 'AI JONDAR PRO',
-      image: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=600',
-      price: 325.00,
-      badge: 'LIMITED',
-      badgeColor: 'secondary'
-    },
-    {
-      id: 'p8',
-      name: 'THUNDER TRAIL',
-      image: 'https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?w=600',
-      price: 310.00,
-      originalPrice: 340.00,
-      badge: 'TRENDING',
-      badgeColor: 'tertiary'
-    }
-  ];
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+  const [featuredError, setFeaturedError] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadFeaturedProducts = async () => {
+      const result = await productService.getProducts({
+        status: 'active',
+        featured: true,
+        limit: 6
+      });
+
+      if (isMounted && result.success) {
+        setFeaturedProducts(result.data.data.map((product) => ({
+          ...product,
+          id: product._id,
+          badge: product.badge || 'FEATURED',
+          badgeColor: product.badgeColor || 'primary',
+          rating: product.rating || 0,
+          reviews: product.reviewCount || 0
+        })));
+      } else if (isMounted) {
+        setFeaturedError(true);
+      }
+
+      if (isMounted) setFeaturedLoading(false);
+    };
+
+    loadFeaturedProducts();
+    return () => { isMounted = false; };
+  }, []);
 
   const scrollCarousel = (direction) => {
     if (carouselRef.current && !isScrolling) {
@@ -88,8 +69,8 @@ function HomePage({ onPageChange }) {
             
             <h1 className="hero-title">
               <span className="hero-subtitle">Step into your everyday</span>
-              <span className="hero-main">SOLE</span>
-              <span className="hero-accent">VIBE</span>
+              <span className="hero-main">STEP INTO</span>
+              <span className="hero-accent">YOUR VIBE</span>
             </h1>
             
             <p className="hero-description">
@@ -160,7 +141,8 @@ function HomePage({ onPageChange }) {
             </button>
 
             <div className="carousel-track" ref={carouselRef}>
-              {featuredProducts.map((product, index) => (
+              {featuredLoading && [1, 2, 3].map((item) => <ProductSkeleton key={item} />)}
+              {!featuredLoading && !featuredError && featuredProducts.map((product, index) => (
                 <div 
                   key={product.id} 
                   className="product-card-featured"
@@ -182,8 +164,8 @@ function HomePage({ onPageChange }) {
                   <div className="product-info">
                     <h3 className="product-name">{product.name}</h3>
                     <div className="product-rating">
-                      <div className="stars">★★★★★</div>
-                      <span className="rating-count">(124)</span>
+                      <div className="stars">{'★'.repeat(Math.floor(product.rating || 0))}{'☆'.repeat(Math.max(0, 5 - Math.floor(product.rating || 0)))}</div>
+                      <span className="rating-count">({product.reviews || 0})</span>
                     </div>
                     <div className="product-price">
                       <span className="current-price">${product.price.toFixed(2)}</span>
@@ -194,6 +176,13 @@ function HomePage({ onPageChange }) {
                   </div>
                 </div>
               ))}
+              {!featuredLoading && featuredError && (
+                <div className="featured-empty-state">
+                  <strong>Featured products are temporarily unavailable.</strong>
+                  <span>Browse the full catalog to continue shopping.</span>
+                  <button className="newsletter-btn" onClick={() => onPageChange('products')}>Shop all footwear</button>
+                </div>
+              )}
             </div>
 
             <button 
@@ -306,21 +295,15 @@ function HomePage({ onPageChange }) {
       <section className="newsletter-section">
         <div className="container">
           <div className="newsletter-content">
-            <h2 className="newsletter-title">Stay Ahead of the Game</h2>
+            <h2 className="newsletter-title">The SoleVibe edit</h2>
             <p className="newsletter-description">
-              Be the first to know about new releases, exclusive offers, and performance tips
+              Explore considered footwear, seasonal colour, and everyday pairs selected for your rotation.
             </p>
             <div className="newsletter-form">
-              <input 
-                type="email" 
-                className="newsletter-input"
-                placeholder="Enter your email address"
-              />
-              <button className="newsletter-btn">Subscribe</button>
+              <button className="newsletter-btn" onClick={() => onPageChange('products')}>
+                Shop all footwear
+              </button>
             </div>
-            <p className="newsletter-disclaimer">
-              By subscribing, you agree to receive marketing emails. Unsubscribe anytime.
-            </p>
           </div>
         </div>
       </section>

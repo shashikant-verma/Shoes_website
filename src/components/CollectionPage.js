@@ -10,12 +10,14 @@ function CollectionPage({
   onAddToCart, 
   onProductClick 
 }) {
+  const initialSubcategory = categoryFilter === 'racing' ? 'road-racing' :
+    ['running', 'training', 'trail', 'lifestyle'].includes(categoryFilter) ? categoryFilter : 'all';
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
   // Filter and sort states
-  const [selectedSubcategory, setSelectedSubcategory] = useState('all');
+  const [selectedSubcategory, setSelectedSubcategory] = useState(initialSubcategory);
   const [sortBy, setSortBy] = useState('featured');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -36,7 +38,6 @@ function CollectionPage({
     { id: 'lifestyle', name: 'LIFESTYLE' }
   ];
 
-  // Sort options
   const sortOptions = [
     { value: 'featured', label: 'Featured' },
     { value: 'newest', label: 'Newest' },
@@ -48,14 +49,16 @@ function CollectionPage({
   // Load products from API
   useEffect(() => {
     loadProducts();
+    setSelectedSubcategory(initialSubcategory);
   }, [categoryFilter]);
 
   const loadProducts = async () => {
     setLoading(true);
     try {
+      const apiCategory = ['men', 'women', 'unisex'].includes(categoryFilter) ? categoryFilter : undefined;
       const result = await productService.getProducts({
         status: 'active',
-        category: categoryFilter !== 'all' ? categoryFilter : undefined,
+        category: apiCategory,
         limit: 50
       });
       
@@ -79,7 +82,7 @@ function CollectionPage({
           badge: product.badge || 'NEW',
           badgeColor: product.badgeColor || 'primary',
           rating: product.rating || 4.5,
-          reviews: product.reviewCount || Math.floor(Math.random() * 200) + 50,
+          reviews: product.reviewCount || 0,
           featured: product.featured || false,
           isNew: product.isNew || false,
           onSale: product.onSale || false
