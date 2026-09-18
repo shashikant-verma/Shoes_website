@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './Login.css';
 import authService from '../services/authService';
+import Toast from './Toast';
 
 function Login({ onLogin, isAdmin }) {
   const [formData, setFormData] = useState({
@@ -10,6 +11,15 @@ function Login({ onLogin, isAdmin }) {
   });
   const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+  };
+
+  const hideToast = () => {
+    setToast(prev => ({ ...prev, show: false }));
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -26,13 +36,13 @@ function Login({ onLogin, isAdmin }) {
       if (isSignUp && !isAdmin) {
         // User registration
         if (!formData.name.trim()) {
-          alert('❌ Please enter your name.');
+          showToast('Please enter your name.', 'error');
           setIsLoading(false);
           return;
         }
         
         if (formData.password.length < 6) {
-          alert('❌ Password must be at least 6 characters long.');
+          showToast('Password must be at least 6 characters long.', 'error');
           setIsLoading(false);
           return;
         }
@@ -46,9 +56,30 @@ function Login({ onLogin, isAdmin }) {
         if (result.success) {
           const { token, user } = result.data;
           authService.setAuth({ token, user, userType: 'user' });
-          onLogin(user, 'user');
+          showToast(`Welcome to SoleVibe, ${user.name}!`, 'success');
+          setTimeout(() => onLogin(user, 'user'), 1000);
         } else {
-          alert(`❌ Registration failed: ${result.message}`);
+          // More user-friendly error messages
+          if (result.message && result.message.includes('already exists')) {
+            const switchToLogin = window.confirm('📧 Email Already Registered!\n\nThis email address is already associated with an account.\n\n✅ Would you like to switch to login mode?\n\nClick "OK" to login, or "Cancel" to use a different email.');
+            
+            if (switchToLogin) {
+              setIsSignUp(false);
+              // Keep the email, clear other fields
+              setFormData(prev => ({
+                ...prev,
+                name: '',
+                password: ''
+              }));
+              showToast('Switched to login mode. Please enter your password.', 'info');
+            } else {
+              showToast('Please use a different email address.', 'warning');
+            }
+          } else if (result.message && result.message.includes('validation')) {
+            showToast('Please check: Name (2+ chars), Valid email, Password (6+ chars)', 'error');
+          } else {
+            showToast(`Registration failed: ${result.message}`, 'error');
+          }
         }
       } else {
         // User/Admin login
@@ -62,33 +93,34 @@ function Login({ onLogin, isAdmin }) {
           
           // Check if admin trying to login to admin route
           if (isAdmin && user.role !== 'ADMIN') {
-            alert('❌ Access denied! Admin credentials required.\n\nEmail: admin@zuxofit.com\nPassword: admin123');
+            showToast('Access denied! Admin credentials required.', 'error');
             setIsLoading(false);
             return;
           }
 
           // Check if user trying to login to user route with admin account
           if (!isAdmin && user.role === 'ADMIN') {
-            alert('❌ Admin account detected! Please use the admin portal.\n\nRedirecting to /admin...');
-            window.location.href = '/admin';
+            showToast('Admin account detected! Redirecting to admin portal...', 'info');
+            setTimeout(() => { window.location.href = '/admin'; }, 2000);
             setIsLoading(false);
             return;
           }
 
           const userType = user.role === 'ADMIN' ? 'admin' : 'user';
           authService.setAuth({ token, user, userType });
-          onLogin(user, userType);
+          showToast(`Welcome back, ${user.name}!`, 'success');
+          setTimeout(() => onLogin(user, userType), 1000);
         } else {
           if (result.message.includes('Invalid credentials')) {
-            alert('❌ Invalid email or password!\n\nPlease check your credentials and try again.');
+            showToast('Invalid email or password! Please check your credentials.', 'error');
           } else {
-            alert(`❌ Login failed: ${result.message || 'Please make sure the backend server and MongoDB are running.'}`);
+            showToast(`Login failed: ${result.message || 'Please make sure the backend server and MongoDB are running.'}`, 'error');
           }
         }
       }
     } catch (error) {
       console.error('Authentication error:', error);
-      alert('❌ Something went wrong. Please try again.');
+      showToast('Something went wrong. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -96,6 +128,14 @@ function Login({ onLogin, isAdmin }) {
 
   return (
     <div className="login-container">
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        isVisible={toast.show} 
+        onClose={hideToast}
+        duration={4000}
+      />
+      
       <div className="login-card">
         <div className="login-header">
           <h1>⚡ SOLEVIBE</h1>

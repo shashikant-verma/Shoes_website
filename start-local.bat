@@ -8,8 +8,8 @@ taskkill /F /IM node.exe 2>nul
 REM Wait a moment
 timeout /t 2 /nobreak >nul
 
-REM Set local environment
-set NODE_ENV=development
+REM Set local environment for React
+copy .env .env.local >nul
 
 REM Start backend server
 echo Starting backend server on port 5001...
@@ -19,9 +19,9 @@ REM Wait for backend to start
 echo Waiting for backend server to start...
 timeout /t 5 /nobreak >nul
 
-REM Start frontend
+REM Start frontend on port 3000 specifically
 echo Starting frontend on port 3000...
-start "Frontend" cmd /c "npm start"
+start "Frontend" cmd /c "set PORT=3000 && npm start"
 
 echo ================================================
 echo Both servers are starting...
