@@ -10,7 +10,7 @@
     "server": "cd server && node server.js",
     "server:dev": "cd server && nodemon server.js",
     "seed": "cd server && node seed/seed.js",
-    "dev": "concurrently \"npm run server:dev\" \"npm start\"",
+    "dev": "concurrently \"npm run server:dev\" \"set PORT=3000 && npm start\"",
     "dev:network": "concurrently \"npm run server\" \"cross-env HOST=0.0.0.0 npm start\"",
     "install:all": "npm install && npm install -g nodemon",
     "kill:node": "taskkill /F /IM node.exe || true",
@@ -50,6 +50,7 @@
   },
   "devDependencies": {
     "concurrently": "^10.0.5",
+    "cross-env": "^10.1.0",
     "nodemon": "^3.1.14"
   }
 }
