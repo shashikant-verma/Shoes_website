@@ -11,7 +11,10 @@
     "server:dev": "cd server && nodemon server.js",
     "seed": "cd server && node seed/seed.js",
     "dev": "concurrently \"npm run server:dev\" \"npm start\"",
-    "install:all": "npm install && npm install -g nodemon"
+    "dev:network": "concurrently \"npm run server\" \"cross-env HOST=0.0.0.0 npm start\"",
+    "install:all": "npm install && npm install -g nodemon",
+    "kill:node": "taskkill /F /IM node.exe || true",
+    "start:fresh": "npm run kill:node && npm run server"
   },
   "dependencies": {
     "@react-three/drei": "^9.88.0",
