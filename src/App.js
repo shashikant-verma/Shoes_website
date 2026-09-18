@@ -13,6 +13,7 @@ import Wishlist from './components/Wishlist';
 import OrderHistory from './components/OrderHistory';
 import Footer from './components/Footer';
 import Toast from './components/Toast';
+import ConnectionStatus from './components/ConnectionStatus';
 import authService from './services/authService';
 import './styles/fashion-overrides.css';
 
@@ -255,6 +256,7 @@ function App() {
 
   return (
     <div className="App">
+      <ConnectionStatus />
       <Navbar 
         currentUser={currentUser} 
         userType={userType} 

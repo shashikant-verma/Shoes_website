@@ -1,0 +1,144 @@
+/* Connection Status Overlay */
+.connection-status-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.connection-status-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border: 1px solid #e0e0e0;
+}
+
+.connection-status-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.connection-status-modal h3 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #e53e3e;
+  margin: 0 0 16px 0;
+}
+
+.connection-details {
+  text-align: left;
+  margin: 24px 0;
+  padding: 20px;
+  background: #f7f7f8;
+  border-radius: 12px;
+  border-left: 4px solid #ff6b35;
+}
+
+.connection-details p {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-weight: 500;
+}
+
+.connection-details ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.connection-details li {
+  padding: 8px 0;
+  color: #666;
+  position: relative;
+  padding-left: 24px;
+}
+
+.connection-details li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #ff6b35;
+  font-weight: bold;
+}
+
+.retry-info {
+  font-size: 14px;
+  color: #666;
+  background: #fff3cd;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 16px;
+  border-left: 4px solid #ffc107;
+}
+
+.connection-actions {
+  margin: 24px 0;
+}
+
+.retry-button {
+  background: linear-gradient(135deg, #ff6b35, #f7931e);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 180px;
+}
+
+.retry-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e55a2e, #e6851a);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+}
+
+.retry-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.connection-help {
+  margin-top: 24px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.connection-help p {
+  margin: 0 0 8px 0;
+  font-weight: 600;
+  color: #333;
+}
+
+.connection-help code {
+  display: block;
+  background: #2d3748;
+  color: #68d391;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  margin: 8px 0;
+  word-break: break-all;
+}
