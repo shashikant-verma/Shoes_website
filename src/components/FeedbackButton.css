@@ -1,0 +1,213 @@
+/* Enhanced Button with Visual Feedback */
+
+.feedback-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: none;
+  border-radius: var(--rounded-lg);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all var(--transition-fast);
+  overflow: hidden;
+  user-select: none;
+  outline: none;
+}
+
+.feedback-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Button Variants */
+.feedback-btn-primary {
+  background: var(--kinetic-red);
+  color: var(--white);
+  border: 2px solid var(--kinetic-red);
+}
+
+.feedback-btn-secondary {
+  background: var(--grey-100);
+  color: var(--text-primary);
+  border: 2px solid var(--border-medium);
+}
+
+.feedback-btn-outline {
+  background: transparent;
+  color: var(--kinetic-red);
+  border: 2px solid var(--kinetic-red);
+}
+
+.feedback-btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 2px solid transparent;
+}
+
+/* Button Sizes */
+.feedback-btn-sm {
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.75rem;
+  min-height: 36px;
+}
+
+.feedback-btn-md {
+  padding: var(--space-3) var(--space-6);
+  font-size: 0.875rem;
+  min-height: 44px;
+}
+
+.feedback-btn-lg {
+  padding: var(--space-4) var(--space-8);
+  font-size: 1rem;
+  min-height: 52px;
+}
+
+.feedback-btn-xl {
+  padding: var(--space-5) var(--space-10);
+  font-size: 1.125rem;
+  min-height: 60px;
+}
+
+/* Interactive States */
+.feedback-btn-primary:hover:not(.feedback-btn-disabled):not(.feedback-btn-loading) {
+  background: var(--brand-red-dark);
+  border-color: var(--brand-red-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.feedback-btn-secondary:hover:not(.feedback-btn-disabled):not(.feedback-btn-loading) {
+  background: var(--grey-200);
+  border-color: var(--border-dark);
+  transform: translateY(-1px);
+}
+
+.feedback-btn-outline:hover:not(.feedback-btn-disabled):not(.feedback-btn-loading) {
+  background: var(--kinetic-red);
+  color: var(--white);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.feedback-btn-ghost:hover:not(.feedback-btn-disabled):not(.feedback-btn-loading) {
+  background: var(--grey-100);
+  border-color: var(--border-light);
+}
+
+/* Pressed State */
+.feedback-btn-pressed {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Loading State */
+.feedback-btn-loading {
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.feedback-btn-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Success State */
+.feedback-btn-success {
+  background: var(--success) !important;
+  border-color: var(--success) !important;
+  color: var(--white) !important;
+  animation: successPulse 0.6s ease-out;
+}
+
+@keyframes successPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Disabled State */
+.feedback-btn-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Icon Styles */
+.feedback-btn-icon {
+  font-size: 1.2em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ripple Effect */
+.feedback-btn:not(.feedback-btn-disabled)::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+  z-index: 0;
+}
+
+.feedback-btn:active:not(.feedback-btn-disabled)::before {
+  width: 200px;
+  height: 200px;
+}
+
+.feedback-btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .feedback-btn {
+    min-width: 120px;
+  }
+  
+  .feedback-btn-sm {
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.7rem;
+  }
+  
+  .feedback-btn-md {
+    padding: var(--space-3) var(--space-4);
+    font-size: 0.8rem;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .feedback-btn,
+  .feedback-btn-spinner,
+  .feedback-btn::before {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .feedback-btn:hover {
+    transform: none !important;
+  }
+}

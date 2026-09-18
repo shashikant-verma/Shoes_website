@@ -4,17 +4,25 @@ import './ProductDetail.css';
 function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWishlist }) {
   const [selectedSize, setSelectedSize] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const [isAdding, setIsAdding] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [sizeError, setSizeError] = useState(false);
   const specs = product.specs || {};
   const features = product.features || [];
 
   const sizes = product.sizes || [];
   const colors = product.colors || [];
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!selectedSize) {
-      alert('Please select a size');
+      setSizeError(true);
+      // Reset error after 3 seconds
+      setTimeout(() => setSizeError(false), 3000);
       return;
     }
+    
+    setSizeError(false);
+    setIsAdding(true);
     
     const productWithSize = {
       ...product,
@@ -22,16 +30,22 @@ function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWis
       quantity: quantity
     };
     
-    onAddToCart(productWithSize);
-    onClose();
+    // Simulate loading time for better UX
+    setTimeout(() => {
+      onAddToCart(productWithSize);
+      setIsAdding(false);
+      setShowSuccess(true);
+      
+      // Reset success state after animation
+      setTimeout(() => {
+        setShowSuccess(false);
+        onClose();
+      }, 1200);
+    }, 300);
   };
 
   const handleWishlist = () => {
-    if (isInWishlist) {
-      alert('Already in wishlist!');
-    } else {
-      onAddToWishlist(product);
-    }
+    onAddToWishlist(product);
   };
 
   return (
@@ -121,12 +135,20 @@ function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWis
             {/* Size Selection */}
             <div className="size-selection">
               <h3 className="headline-md">Select Size (US)</h3>
+              {sizeError && (
+                <p className="size-error-message">
+                  ⚠️ Please select a size before adding to cart
+                </p>
+              )}
               <div className="size-grid">
                 {sizes.map((size) => (
                   <button
                     key={size}
-                    className={`size-btn ${selectedSize === size ? 'active' : ''}`}
-                    onClick={() => setSelectedSize(size)}
+                    className={`size-btn ${selectedSize === size ? 'active' : ''} ${sizeError ? 'error' : ''}`}
+                    onClick={() => {
+                      setSelectedSize(size);
+                      setSizeError(false); // Clear error when size is selected
+                    }}
                   >
                     {size}
                   </button>
@@ -169,12 +191,25 @@ function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWis
 
             {/* Add to Cart */}
             <button 
-              className="btn-add-to-cart-large"
+              className={`btn-add-to-cart-large ${showSuccess ? 'success' : ''}`}
               onClick={handleAddToCart}
-              disabled={product.stock === 0}
+              disabled={product.stock === 0 || isAdding || showSuccess}
             >
-              <span>ADD TO CART</span>
-              <span className="btn-icon">→</span>
+              {showSuccess ? (
+                <>
+                  <span>✅ ADDED TO CART!</span>
+                </>
+              ) : isAdding ? (
+                <>
+                  <span>ADDING...</span>
+                  <span className="btn-icon">⏳</span>
+                </>
+              ) : (
+                <>
+                  <span>ADD TO CART</span>
+                  <span className="btn-icon">→</span>
+                </>
+              )}
             </button>
           </div>
         </div>

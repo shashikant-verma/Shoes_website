@@ -25,7 +25,7 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
       <div className="announcement-bar">
         <div className="announcement-content">
           <span className="announcement-text">
-            FREE SHIPPING ON ORDERS ABOVE ₹999
+            🎉 FREE SHIPPING ON ORDERS ABOVE ₹15,000
           </span>
           <span className="announcement-divider">|</span>
           <span className="announcement-text">

@@ -12,6 +12,7 @@ import Cart from './components/Cart';
 import Wishlist from './components/Wishlist';
 import OrderHistory from './components/OrderHistory';
 import Footer from './components/Footer';
+import Toast from './components/Toast';
 import authService from './services/authService';
 import './styles/fashion-overrides.css';
 
@@ -27,6 +28,13 @@ function App() {
   const [wishlist, setWishlist] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Toast notification state
+  const [toast, setToast] = useState({
+    isVisible: false,
+    message: '',
+    type: 'success'
+  });
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -106,6 +114,19 @@ function App() {
     }
   };
 
+  // Toast notification helper
+  const showToast = (message, type = 'success') => {
+    setToast({
+      isVisible: true,
+      message,
+      type
+    });
+  };
+
+  const hideToast = () => {
+    setToast(prev => ({ ...prev, isVisible: false }));
+  };
+
   const handleAddToCart = (product) => {
     if (userType !== 'user') return;
     
@@ -125,7 +146,7 @@ function App() {
     
     setCart(updatedCart);
     localStorage.setItem(`cart-${currentUser.id}`, JSON.stringify(updatedCart));
-    alert('✅ Added to cart!');
+    showToast(`Added ${product.name} to cart!`, 'success');
   };
 
   const handleUpdateCart = (itemId, newQuantity) => {
@@ -147,14 +168,14 @@ function App() {
     
     const exists = wishlist.find(item => item.id === product.id);
     if (exists) {
-      alert('Already in wishlist!');
+      showToast('Already in wishlist!', 'info');
       return;
     }
     
     const updatedWishlist = [...wishlist, product];
     setWishlist(updatedWishlist);
     localStorage.setItem(`wishlist-${currentUser.id}`, JSON.stringify(updatedWishlist));
-    alert('❤️ Added to wishlist!');
+    showToast(`Added ${product.name} to wishlist!`, 'success');
   };
 
   const handleRemoveFromWishlist = (productId) => {
@@ -351,6 +372,7 @@ function App() {
           onUpdateCart={handleUpdateCart}
           onRemoveItem={handleRemoveFromCart}
           currentUser={currentUser}
+          showToast={showToast}
         />
       )}
 
@@ -378,6 +400,15 @@ function App() {
       )}
 
       <Footer onPageChange={handlePageChange} />
+      
+      {/* Toast Notifications */}
+      <Toast 
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+        duration={3000}
+      />
     </div>
   );
 }

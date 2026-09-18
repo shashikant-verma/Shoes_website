@@ -72,8 +72,8 @@ const createOrder = async (req, res, next) => {
       }
     }
 
-    // Calculate shipping (free over $180)
-    const shipping = subtotal >= 180 ? 0 : 15;
+    // Calculate shipping (free over ₹15,000)
+    const shipping = subtotal >= 15000 ? 0 : 150;
 
     // Create order
     const order = await Order.create({

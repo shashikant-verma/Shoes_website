@@ -65,7 +65,7 @@ function Wishlist({ wishlist, onRemoveFromWishlist, onProductClick, onAddToCart 
                 </div>
 
                 <div className="wishlist-footer">
-                  <span className="wishlist-price">${product.price.toFixed(2)}</span>
+                  <span className="wishlist-price">₹{product.price.toFixed(2)}</span>
                   <button
                     className="btn-add-from-wishlist"
                     onClick={() => {

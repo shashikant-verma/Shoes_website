@@ -162,8 +162,8 @@
 }
 
 .btn-newsletter:hover {
-  background: white;
-  color: var(--background);
+  background: var(--brand-red-dark);
+  color: var(--white);
   box-shadow: 0 0 20px rgba(255, 77, 46, 0.6);
   transform: scale(1.05);
 }

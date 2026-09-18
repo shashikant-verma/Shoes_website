@@ -8,7 +8,7 @@ function ProductShowcase({ onAddToCart, categoryFilter, onProductClick }) {
   const [selectedCategory, setSelectedCategory] = useState(categoryFilter || 'all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('featured');
-  const [priceRange, setPriceRange] = useState([0, 500]);
+  const [priceRange, setPriceRange] = useState([0, 8000]);
   const [showFilters, setShowFilters] = useState(false);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -130,7 +130,7 @@ function ProductShowcase({ onAddToCart, categoryFilter, onProductClick }) {
   const handleResetFilters = () => {
     setSearchQuery('');
     setSortBy('featured');
-    setPriceRange([0, 500]);
+    setPriceRange([0, 8000]);
   };
 
   if (loading) {
@@ -242,7 +242,7 @@ function ProductShowcase({ onAddToCart, categoryFilter, onProductClick }) {
 
               <div className="filter-group">
                 <label className="filter-label telemetry-label">
-                  PRICE RANGE: ${priceRange[0]} - ${priceRange[1]}
+                  PRICE RANGE: ₹{priceRange[0]} - ₹{priceRange[1]}
                 </label>
                 <div className="price-range-inputs">
                   <input
@@ -252,7 +252,7 @@ function ProductShowcase({ onAddToCart, categoryFilter, onProductClick }) {
                     value={priceRange[0]}
                     onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
                     min="0"
-                    max="500"
+                    max="8000"
                   />
                   <span className="range-separator">—</span>
                   <input
@@ -262,7 +262,7 @@ function ProductShowcase({ onAddToCart, categoryFilter, onProductClick }) {
                     value={priceRange[1]}
                     onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
                     min="0"
-                    max="500"
+                    max="8000"
                   />
                 </div>
               </div>

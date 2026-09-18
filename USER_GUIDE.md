@@ -130,7 +130,7 @@ Password: admin123
 - **Price Breakdown:**
   - Subtotal
   - Discount (if promo applied)
-  - Shipping (FREE over $180)
+  - Shipping (FREE over ₹15,000)
   - Total amount
 
 - **Trust Badges:**
@@ -196,7 +196,7 @@ Each order card displays:
 - **LOGOUT** - Sign out
 
 #### Alert Bar (Top):
-- ⚡ FREE EXPRESS SHIPPING ON ORDERS +$180 // 30-DAY RETURNS
+- ⚡ FREE EXPRESS SHIPPING ON ORDERS +₹15,000 // 30-DAY RETURNS
 
 ---
 
@@ -261,7 +261,7 @@ Each order card displays:
 ### Shopping Tips:
 1. **Add to Wishlist** before adding to cart to save for later
 2. **Use promo codes** for discounts (try KINETIC10)
-3. **Free shipping** on orders over $180
+3. **Free shipping** on orders over ₹15,000
 4. **Check ratings** before purchasing
 5. **Filter by price** to find deals
 

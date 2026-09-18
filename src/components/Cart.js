@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import './Cart.css';
 
-function Cart({ cart, onUpdateCart, onRemoveItem, currentUser }) {
+function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast }) {
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [promoApplied, setPromoApplied] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
 
   const promoCodes = {
     'KINETIC10': 10,
@@ -13,7 +15,7 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser }) {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = subtotal > 180 ? 0 : 15;
+  const shipping = subtotal > 15000 ? 0 : 150;
   const discountAmount = (subtotal * discount) / 100;
   const total = subtotal - discountAmount + shipping;
 
@@ -27,18 +29,41 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser }) {
     if (promoCodes[code]) {
       setDiscount(promoCodes[code]);
       setPromoApplied(true);
-      alert(`✅ Promo code applied! ${promoCodes[code]}% discount`);
+      if (showToast) {
+        showToast(`Promo code applied! ${promoCodes[code]}% discount`, 'success');
+      }
     } else {
-      alert('❌ Invalid promo code');
+      if (showToast) {
+        showToast('Invalid promo code', 'error');
+      }
     }
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cart.length === 0) {
-      alert('Your cart is empty!');
+      if (showToast) {
+        showToast('Your cart is empty!', 'warning');
+      }
       return;
     }
-    alert(`🎉 Checkout complete!\n\nTotal: ₹${total.toLocaleString()}\n\nThank you for your order, ${currentUser.name}!`);
+    
+    setIsCheckingOut(true);
+    
+    // Simulate checkout processing
+    setTimeout(() => {
+      setIsCheckingOut(false);
+      setCheckoutSuccess(true);
+      
+      // Show success message
+      if (showToast) {
+        showToast(`🎉 Checkout complete! Total: ₹${total.toLocaleString()}. Thank you ${currentUser.name}!`, 'success');
+      }
+      
+      // Reset success state
+      setTimeout(() => {
+        setCheckoutSuccess(false);
+      }, 2000);
+    }, 1500);
   };
 
   if (cart.length === 0) {
@@ -193,7 +218,7 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser }) {
 
                 {shipping > 0 && (
                   <p className="shipping-notice telemetry-label">
-                    Add ₹{(180 - subtotal).toLocaleString()} more for FREE shipping
+                    Add ₹{(15000 - subtotal).toLocaleString()} more for FREE shipping
                   </p>
                 )}
 
@@ -206,9 +231,26 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser }) {
               </div>
 
               {/* Checkout Button */}
-              <button className="btn-checkout" onClick={handleCheckout}>
-                <span>PROCEED TO CHECKOUT</span>
-                <span className="btn-icon">→</span>
+              <button 
+                className={`btn-checkout ${checkoutSuccess ? 'success' : ''} ${isCheckingOut ? 'loading' : ''}`}
+                onClick={handleCheckout}
+                disabled={isCheckingOut || checkoutSuccess}
+              >
+                {checkoutSuccess ? (
+                  <>
+                    <span>✅ ORDER COMPLETED!</span>
+                  </>
+                ) : isCheckingOut ? (
+                  <>
+                    <span>PROCESSING...</span>
+                    <span className="btn-icon">⏳</span>
+                  </>
+                ) : (
+                  <>
+                    <span>PROCEED TO CHECKOUT</span>
+                    <span className="btn-icon">→</span>
+                  </>
+                )}
               </button>
 
               {/* Trust Badges */}

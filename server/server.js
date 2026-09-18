@@ -21,7 +21,10 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: [
+    process.env.CLIENT_URL || 'http://localhost:3000',
+    'http://localhost:3001'
+  ],
   credentials: true
 }));
 
@@ -55,5 +58,5 @@ app.use(errorMiddleware);
 app.listen(PORT, () => {
   console.log(`⚡ SoleVibe Server running on port ${PORT}`);
   console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`📡 CORS enabled for: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);
+  console.log(`📡 CORS enabled for: ${process.env.CLIENT_URL || 'http://localhost:3000'}, http://localhost:3001`);
 });

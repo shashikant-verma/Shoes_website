@@ -273,7 +273,7 @@ function HomePage({ onPageChange }) {
             <div className="feature-item">
               <div className="feature-icon">🚚</div>
               <h3 className="feature-title">Free Shipping</h3>
-              <p className="feature-description">Free delivery on orders over $180</p>
+              <p className="feature-description">Free delivery on orders over ₹15,000</p>
             </div>
             <div className="feature-item">
               <div className="feature-icon">↩️</div>

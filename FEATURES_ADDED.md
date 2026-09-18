@@ -18,16 +18,16 @@ Successfully added ALL requested enhancements to the shoe e-commerce website:
 **Now 16 total products** (previously 8)
 
 #### New Men's Shoes:
-9. **NEXUS ULTRA** - $340 - Ultra Tech cushioning
-10. **STEALTH RUNNER** - $275 - Night Edition with reflective tech
-11. **APEX SWIFT** - $299 - Speed King for tempo runs
-12. **GRAVITY DEFIER** - $365 - Max Cushion for high mileage
+9. **NEXUS ULTRA** - ₹28,500 - Ultra Tech cushioning
+10. **STEALTH RUNNER** - ₹23,000 - Night Edition with reflective tech
+11. **APEX SWIFT** - ₹25,000 - Speed King for tempo runs
+12. **GRAVITY DEFIER** - ₹30,500 - Max Cushion for high mileage
 
 #### New Women's Shoes:
-13. **LUNA GLIDE** - $255 - Moonlight smooth transitions
-14. **PHOENIX RISE** - $335 - Reborn with revolutionary energy return
-15. **CRYSTAL DASH** - $270 - Sparkle performance + style
-16. **NIMBUS CLOUD** - $289 - Cloud Tech for recovery runs
+13. **LUNA GLIDE** - ₹21,300 - Moonlight smooth transitions
+14. **PHOENIX RISE** - ₹28,000 - Reborn with revolutionary energy return
+15. **CRYSTAL DASH** - ₹22,500 - Sparkle performance + style
+16. **NIMBUS CLOUD** - ₹24,200 - Cloud Tech for recovery runs
 
 ### Product Features:
 - Each product includes: name, image, category, price, rating, reviews count
@@ -76,7 +76,7 @@ Successfully added ALL requested enhancements to the shoe e-commerce website:
 
 #### Price Range Filter:
 - Min/Max price inputs
-- Range: $0 - $500
+- Range: ₹0 - ₹42,000
 - Number input fields
 - Real-time filtering
 
@@ -387,7 +387,7 @@ Each product now includes:
 - `SPEED20` → 20% off
 
 ### Free Shipping:
-- Orders over $180
+- Orders over ₹15,000
 - Progress indicator in cart
 
 ### Demo Credentials:
