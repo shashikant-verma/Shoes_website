@@ -83,19 +83,18 @@ function HomePage({ onPageChange }) {
           <div className="hero-content">
             <div className="hero-badge">
               <span className="badge-dot"></span>
-              <span>NEW COLLECTION 2024</span>
+              <span>THE NEW SEASON</span>
             </div>
             
             <h1 className="hero-title">
-              <span className="hero-subtitle">Performance Redefined</span>
+              <span className="hero-subtitle">Step into your everyday</span>
               <span className="hero-main">SOLE</span>
               <span className="hero-accent">VIBE</span>
             </h1>
             
             <p className="hero-description">
-              Experience the future of athletic footwear with our cutting-edge 
-              carbon-plate technology and biomechanical design. Engineered for champions, 
-              crafted for performance.
+              Signature sneakers and everyday essentials designed to move with your style.
+              Find your next pair in the SoleVibe edit.
             </p>
 
             <div className="hero-stats">
@@ -114,13 +113,13 @@ function HomePage({ onPageChange }) {
             </div>
 
             <div className="hero-actions">
-              <button className="btn-hero-primary" onClick={() => onPageChange('products')}>
-                Shop Collection
+              <button className="btn-hero-primary" onClick={() => onPageChange('men')}>
+                Shop Men
                 <span className="btn-arrow">→</span>
               </button>
-              <button className="btn-hero-secondary" onClick={() => onPageChange('products')}>
-                Watch Video
-                <span className="play-icon">▶</span>
+              <button className="btn-hero-secondary" onClick={() => onPageChange('women')}>
+                Shop Women
+                <span className="btn-arrow">→</span>
               </button>
             </div>
           </div>
@@ -143,11 +142,11 @@ function HomePage({ onPageChange }) {
         <div className="container">
           <div className="section-header">
             <div className="section-badge">
-              <span>BESTSELLERS</span>
+              <span>THE SOLEVIBE EDIT</span>
             </div>
-            <h2 className="section-title">Featured Products</h2>
+            <h2 className="section-title">Fresh steps, considered details</h2>
             <p className="section-subtitle">
-              Discover our most popular performance footwear, trusted by athletes worldwide
+              A refined edit of pairs made for daily plans, late nights, and everything between.
             </p>
           </div>
 
@@ -212,9 +211,9 @@ function HomePage({ onPageChange }) {
       <section className="categories-section">
         <div className="container">
           <div className="section-header">
-            <h2 className="section-title">Shop by Category</h2>
+            <h2 className="section-title">Find your pair</h2>
             <p className="section-subtitle">
-              Find the perfect footwear for your performance needs
+              Explore understated classics and standout colour for every wardrobe.
             </p>
           </div>
 

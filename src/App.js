@@ -13,6 +13,7 @@ import Wishlist from './components/Wishlist';
 import OrderHistory from './components/OrderHistory';
 import Footer from './components/Footer';
 import authService from './services/authService';
+import './styles/fashion-overrides.css';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -242,7 +243,7 @@ function App() {
       {currentPage === 'shop' && (
         <CollectionPage 
           title="SHOP"
-          subtitle="Explore the complete KINETIC // STRIDE footwear collection. All footwear designed for running, racing, training and everyday performance."
+          subtitle="Explore the complete SoleVibe footwear collection, curated for everyday movement and personal style."
           categoryFilter="all"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
@@ -260,7 +261,7 @@ function App() {
       {currentPage === 'men' && (
         <CollectionPage 
           title="MEN"
-          subtitle="Men's Footwear Collection. Explore performance footwear designed for running, racing, training and everyday movement."
+          subtitle="A considered edit of men's footwear for everyday movement and personal style."
           categoryFilter="men"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
@@ -270,7 +271,7 @@ function App() {
       {currentPage === 'women' && (
         <CollectionPage 
           title="WOMEN"
-          subtitle="Women's Footwear Collection. Explore performance and lifestyle footwear designed for everyday movement."
+          subtitle="A considered edit of women's footwear for everyday movement and personal style."
           categoryFilter="women"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
@@ -280,7 +281,7 @@ function App() {
       {currentPage === 'sale' && (
         <CollectionPage 
           title="SALE"
-          subtitle="Performance footwear at special prices. Limited time offers on premium athletic shoes."
+          subtitle="Discover considered pairs and seasonal prices in the SoleVibe sale edit."
           categoryFilter="all"
           saleMode={true}
           onAddToCart={handleAddToCart}
@@ -331,7 +332,7 @@ function App() {
       {currentPage === 'new-arrivals' && (
         <CollectionPage 
           title="NEW ARRIVALS"
-          subtitle="Latest footwear innovations. Discover the newest additions to the KINETIC // STRIDE performance collection."
+          subtitle="Meet the newest additions to the SoleVibe footwear collection."
           categoryFilter="new"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}

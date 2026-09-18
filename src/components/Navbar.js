@@ -21,19 +21,19 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
 
   return (
     <>
-      {/* Top Announcement Bar */}
+      {/* Top store utility strip */}
       <div className="announcement-bar">
         <div className="announcement-content">
           <span className="announcement-text">
-            🎉 FREE SHIPPING ON ORDERS ABOVE ₹999
+            STORE LOCATOR
           </span>
           <span className="announcement-divider">|</span>
           <span className="announcement-text">
-            🔄 EASY RETURNS
+            HELP
           </span>
           <span className="announcement-divider">|</span>
           <span className="announcement-text">
-            🔒 SECURE CHECKOUT
+            FREE SHIPPING ON ORDERS ABOVE ₹999
           </span>
         </div>
       </div>
@@ -65,28 +65,10 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
                 WOMEN
               </button>
               <button 
-                className={`nav-link ${currentPage === 'running' ? 'active' : ''}`}
-                onClick={() => handleNavClick('running')}
+                className={`nav-link ${currentPage === 'products' ? 'active' : ''}`}
+                onClick={() => handleNavClick('products')}
               >
-                RUNNING
-              </button>
-              <button 
-                className={`nav-link ${currentPage === 'training' ? 'active' : ''}`}
-                onClick={() => handleNavClick('training')}
-              >
-                TRAINING
-              </button>
-              <button 
-                className={`nav-link ${currentPage === 'trail' ? 'active' : ''}`}
-                onClick={() => handleNavClick('trail')}
-              >
-                TRAIL
-              </button>
-              <button 
-                className={`nav-link ${currentPage === 'racing' ? 'active' : ''}`}
-                onClick={() => handleNavClick('racing')}
-              >
-                RACING
+                ACCESSORIES
               </button>
               <button 
                 className={`nav-link ${currentPage === 'new-arrivals' ? 'active' : ''}`}

@@ -9,9 +9,9 @@ html {
 }
 
 body {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  background: #0c0d14;
-  color: #e3e1ec;
+  font-family: var(--font-body);
+  background: var(--paper);
+  color: var(--ink);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -29,20 +29,20 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #12131a;
+  background: var(--wash);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #ff4d2e;
+  background: var(--brand-red);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #ff5637;
+  background: var(--brand-red-dark);
 }
 
 /* Selection */
 ::selection {
-  background: rgba(255, 77, 46, 0.3);
-  color: #e3e1ec;
+  background: rgba(201, 35, 45, 0.18);
+  color: var(--ink);
 }

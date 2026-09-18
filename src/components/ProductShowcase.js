@@ -155,12 +155,12 @@ function ProductShowcase({ onAddToCart, categoryFilter, onProductClick }) {
         <div className="showcase-header fade-in">
           <div className="telemetry-badge">
             <span className="status-dot pulse-glow"></span>
-            <span className="telemetry-label">MONGODB LIVE</span>
+            <span className="telemetry-label">SHOP THE EDIT</span>
           </div>
           
           <h2 className="section-title">
-            <span className="headline-md">PRECISION</span>
-            <span className="headline-lg gradient-text">BIOMECHANICS</span>
+            <span className="headline-md">Everyday</span>
+            <span className="headline-lg gradient-text">Essentials</span>
           </h2>
 
           {/* Search Bar */}

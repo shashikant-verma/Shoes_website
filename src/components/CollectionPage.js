@@ -66,10 +66,18 @@ function CollectionPage({
           image: product.image,
           category: product.category,
           price: product.price,
+          specs: {
+            weight: product.specifications?.weight || 'N/A',
+            drop: product.specifications?.drop || 'N/A',
+            energy: product.specifications?.energy || 'N/A'
+          },
           originalPrice: product.originalPrice,
           discount: product.discount,
           stock: product.stock || 0,
           description: product.description,
+          features: product.features || [],
+          badge: product.badge || 'NEW',
+          badgeColor: product.badgeColor || 'primary',
           rating: product.rating || 4.5,
           reviews: product.reviewCount || Math.floor(Math.random() * 200) + 50,
           featured: product.featured || false,
