@@ -17,13 +17,17 @@ const errorMiddleware = require('./middleware/errorMiddleware');
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = 5001; // Fixed port for backend API
 
 // Middleware
 app.use(cors({
   origin: [
     process.env.CLIENT_URL || 'http://localhost:3000',
-    'http://localhost:3001'
+    'http://localhost:3001',
+    'http://localhost:3002',
+    'http://192.168.29.21:3000',
+    'http://192.168.29.21:3001',
+    'http://192.168.29.21:3002'
   ],
   credentials: true
 }));
@@ -55,8 +59,9 @@ app.get('/api/health', (req, res) => {
 app.use(errorMiddleware);
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`⚡ SoleVibe Server running on port ${PORT}`);
-  console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`📡 CORS enabled for: ${process.env.CLIENT_URL || 'http://localhost:3000'}, http://localhost:3001`);
+  console.log(`🌐 Local: http://localhost:${PORT}/api/health`);
+  console.log(`🌐 Network: http://192.168.29.21:${PORT}/api/health`);
+  console.log(`📡 CORS enabled for: localhost:3000-3002, 192.168.29.21:3000-3002`);
 });
