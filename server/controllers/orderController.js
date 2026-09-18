@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 
@@ -25,12 +26,26 @@ const createOrder = async (req, res, next) => {
     const validatedItems = [];
 
     for (const item of items) {
-      const product = await Product.findById(item.product);
+      let product = null;
+      const productId = item.product || item._id || item.id;
+      
+      if (mongoose.Types.ObjectId.isValid(productId)) {
+        product = await Product.findById(productId);
+      }
+
+      if (!product) {
+        product = await Product.findOne({ 
+          $or: [
+            { slug: productId }, 
+            { _id: productId }
+          ] 
+        });
+      }
 
       if (!product) {
         return res.status(400).json({
           success: false,
-          message: `Product not found: ${item.product}`
+          message: `Product not found: ${productId}`
         });
       }
 
@@ -145,7 +160,7 @@ const getOrders = async (req, res, next) => {
 };
 
 // @desc    Get all orders (Admin)
-// @route   GET /api/orders/admin
+// @route   GET /api/orders/admin/all
 // @access  Private/Admin
 const getAllOrders = async (req, res, next) => {
   try {
