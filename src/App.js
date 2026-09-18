@@ -11,6 +11,7 @@ import ProductDetail from './components/ProductDetail';
 import Cart from './components/Cart';
 import Wishlist from './components/Wishlist';
 import OrderHistory from './components/OrderHistory';
+import OrderConfirmation from './components/OrderConfirmation';
 import Footer from './components/Footer';
 import Toast from './components/Toast';
 import ConnectionStatus from './components/ConnectionStatus';
@@ -29,6 +30,7 @@ function App() {
   const [wishlist, setWishlist] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [completedOrder, setCompletedOrder] = useState(null);
   
   // Toast notification state
   const [toast, setToast] = useState({
@@ -183,6 +185,31 @@ function App() {
     const updatedWishlist = wishlist.filter(item => item.id !== productId);
     setWishlist(updatedWishlist);
     localStorage.setItem(`wishlist-${currentUser.id}`, JSON.stringify(updatedWishlist));
+  };
+
+  const handleOrderComplete = (order) => {
+    // Add order to orders list
+    const updatedOrders = [order, ...orders];
+    setOrders(updatedOrders);
+    localStorage.setItem(`orders-${currentUser.id}`, JSON.stringify(updatedOrders));
+    
+    // Clear the cart
+    setCart([]);
+    localStorage.removeItem(`cart-${currentUser.id}`);
+    
+    // Set completed order and navigate to confirmation
+    setCompletedOrder(order);
+    setCurrentPage('order-confirmation');
+  };
+
+  const handleContinueShopping = () => {
+    setCompletedOrder(null);
+    setCurrentPage('home');
+  };
+
+  const handleViewOrders = () => {
+    setCompletedOrder(null);
+    setCurrentPage('orders');
   };
 
   const handlePageChange = (page) => {
@@ -375,6 +402,15 @@ function App() {
           onRemoveItem={handleRemoveFromCart}
           currentUser={currentUser}
           showToast={showToast}
+          onOrderComplete={handleOrderComplete}
+        />
+      )}
+
+      {currentPage === 'order-confirmation' && (
+        <OrderConfirmation
+          order={completedOrder}
+          onContinueShopping={handleContinueShopping}
+          onViewOrders={handleViewOrders}
         />
       )}
 

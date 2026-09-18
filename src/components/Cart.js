@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import './Cart.css';
 
-function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast }) {
+function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrderComplete }) {
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [promoApplied, setPromoApplied] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
 
   const promoCodes = {
     'KINETIC10': 10,
@@ -39,6 +38,12 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast }) {
     }
   };
 
+  const generateOrderId = () => {
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `SV${timestamp}${random}`;
+  };
+
   const handleCheckout = async () => {
     if (cart.length === 0) {
       if (showToast) {
@@ -51,18 +56,44 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast }) {
     
     // Simulate checkout processing
     setTimeout(() => {
+      // Create order object
+      const newOrder = {
+        id: generateOrderId(),
+        createdAt: new Date().toISOString(),
+        status: 'processing',
+        items: cart.map(item => ({
+          id: item.id,
+          name: item.name,
+          image: item.image,
+          price: item.price,
+          quantity: item.quantity,
+          size: item.size,
+          category: item.category
+        })),
+        subtotal: subtotal,
+        discount: discountAmount,
+        shipping: shipping,
+        total: total,
+        promoCode: promoApplied ? promoCode.toUpperCase() : null,
+        user: {
+          id: currentUser.id,
+          name: currentUser.name,
+          email: currentUser.email
+        }
+      };
+
       setIsCheckingOut(false);
-      setCheckoutSuccess(true);
       
       // Show success message
       if (showToast) {
-        showToast(`🎉 Checkout complete! Total: ₹${total.toLocaleString()}. Thank you ${currentUser.name}!`, 'success');
+        showToast(`🎉 Order placed successfully! Order #${newOrder.id}`, 'success');
       }
       
-      // Reset success state
-      setTimeout(() => {
-        setCheckoutSuccess(false);
-      }, 2000);
+      // Call the order completion handler
+      if (onOrderComplete) {
+        onOrderComplete(newOrder);
+      }
+      
     }, 1500);
   };
 
@@ -232,15 +263,11 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast }) {
 
               {/* Checkout Button */}
               <button 
-                className={`btn-checkout ${checkoutSuccess ? 'success' : ''} ${isCheckingOut ? 'loading' : ''}`}
+                className={`btn-checkout ${isCheckingOut ? 'loading' : ''}`}
                 onClick={handleCheckout}
-                disabled={isCheckingOut || checkoutSuccess}
+                disabled={isCheckingOut}
               >
-                {checkoutSuccess ? (
-                  <>
-                    <span>✅ ORDER COMPLETED!</span>
-                  </>
-                ) : isCheckingOut ? (
+                {isCheckingOut ? (
                   <>
                     <span>PROCESSING...</span>
                     <span className="btn-icon">⏳</span>
