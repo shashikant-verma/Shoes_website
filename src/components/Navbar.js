@@ -44,8 +44,8 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
           <div className="navbar-left">
             <div className="navbar-brand" onClick={() => handleNavClick('home')} style={{ cursor: 'pointer' }}>
               <span className="brand-icon">⚡</span>
-              <span className="brand-text">KINETIC</span>
-              <span className="brand-subtitle">STRIDE</span>
+              <span className="brand-text">SOLE</span>
+              <span className="brand-subtitle">VIBE</span>
             </div>
           </div>
 

@@ -210,7 +210,7 @@ function App() {
       <div className="App">
         <div className="loading-container">
           <div className="loading-spinner">⚡</div>
-          <h2>KINETIC // STRIDE</h2>
+          <h2>SOLEVIBE</h2>
           <p>Initializing Application...</p>
         </div>
       </div>

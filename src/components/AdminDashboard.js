@@ -119,7 +119,7 @@ function AdminDashboard({ currentUser, onLogout }) {
       <div className="admin-dashboard">
         <header className="admin-header">
           <div className="admin-header-left">
-            <h1>⚡ KINETIC // STRIDE Admin</h1>
+            <h1>⚡ SOLEVIBE Admin</h1>
             <span className="admin-badge">Loading...</span>
           </div>
           <div className="admin-header-right">
@@ -144,7 +144,7 @@ function AdminDashboard({ currentUser, onLogout }) {
       <div className="admin-dashboard">
         <header className="admin-header">
           <div className="admin-header-left">
-            <h1>⚡ KINETIC // STRIDE Admin</h1>
+            <h1>⚡ SOLEVIBE Admin</h1>
             <span className="admin-badge">Connection Error</span>
           </div>
           <div className="admin-header-right">
@@ -172,7 +172,7 @@ function AdminDashboard({ currentUser, onLogout }) {
     <div className="admin-dashboard">
       <header className="admin-header">
         <div className="admin-header-left">
-          <h1>⚡ KINETIC // STRIDE Admin</h1>
+          <h1>⚡ SOLEVIBE Admin</h1>
           <span className="admin-badge">MongoDB Live</span>
         </div>
         <div className="admin-header-right">

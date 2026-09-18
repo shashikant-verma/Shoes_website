@@ -1,4 +1,4 @@
-# 🎯 USER GUIDE - Kinetic Shoe E-Commerce Website
+# 🎯 USER GUIDE - SoleVibe Shoe E-Commerce Website
 
 ## 🚀 Getting Started
 
@@ -185,7 +185,7 @@ Each order card displays:
 ### 7. 🎯 NAVBAR FEATURES
 
 #### Left Side:
-- **⚡ KINETIC** logo - Click to go home
+  - **⚡ SOLEVIBE** logo - Click to go home
 - **Menu items:** HOME, ALL SHOES, MEN, WOMEN
 
 #### Right Side:
@@ -232,7 +232,7 @@ Each order card displays:
 - Hover for highlight effect
 
 #### Bottom Bar:
-- Copyright © 2026 KINETIC
+- Copyright © 2026 SOLEVIBE
 - Privacy Policy, Terms, Cookie Policy
 - Payment methods: 💳 🅿️ 🍎 📱
 
@@ -333,7 +333,7 @@ A: This is a demo site - checkout creates a simulated order
 
 ---
 
-## 🎊 Enjoy Shopping at Kinetic!
+## 🎊 Enjoy Shopping at SoleVibe!
 
 Experience the future of performance footwear with ultra-compressed carbon-plate geometries engineered for maximum ground force amplification! 🚀
 

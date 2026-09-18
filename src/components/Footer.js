@@ -12,7 +12,7 @@ function Footer({ onPageChange }) {
           <div className="footer-brand">
             <div className="brand-logo">
               <span className="brand-icon">⚡</span>
-              <span className="brand-text">KINETIC</span>
+                <span className="brand-text">SOLE</span>
             </div>
             <p className="body-sm footer-tagline">
               Ultra-compressed carbon-plate geometries engineered for maximum ground force amplification.
@@ -93,7 +93,7 @@ function Footer({ onPageChange }) {
         <div className="footer-bottom">
           <div className="footer-bottom-left">
             <p className="telemetry-label">
-              © {currentYear} KINETIC. ALL RIGHTS RESERVED.
+              © {currentYear} SOLEVIBE. ALL RIGHTS RESERVED.
             </p>
             <div className="footer-legal">
               <a href="#" className="footer-legal-link">Privacy Policy</a>

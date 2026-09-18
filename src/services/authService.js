@@ -28,7 +28,8 @@ const authService = {
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.message || 'Login failed'
+        message: error.response?.data?.message ||
+          (error.request ? 'Cannot connect to the backend. Start MongoDB and the API server.' : 'Login failed')
       };
     }
   },

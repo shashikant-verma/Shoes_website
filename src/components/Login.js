@@ -82,7 +82,7 @@ function Login({ onLogin, isAdmin }) {
           if (result.message.includes('Invalid credentials')) {
             alert('❌ Invalid email or password!\n\nPlease check your credentials and try again.');
           } else {
-            alert(`❌ Login failed: ${result.message}`);
+            alert(`❌ Login failed: ${result.message || 'Please make sure the backend server and MongoDB are running.'}`);
           }
         }
       }
@@ -98,7 +98,7 @@ function Login({ onLogin, isAdmin }) {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h1>⚡ KINETIC // STRIDE</h1>
+          <h1>⚡ SOLEVIBE</h1>
           <p>Premium Performance Footwear</p>
         </div>
 

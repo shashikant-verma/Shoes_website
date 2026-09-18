@@ -88,8 +88,8 @@ function HomePage({ onPageChange }) {
             
             <h1 className="hero-title">
               <span className="hero-subtitle">Performance Redefined</span>
-              <span className="hero-main">KINETIC</span>
-              <span className="hero-accent">STRIDE</span>
+              <span className="hero-main">SOLE</span>
+              <span className="hero-accent">VIBE</span>
             </h1>
             
             <p className="hero-description">
@@ -129,7 +129,7 @@ function HomePage({ onPageChange }) {
             <div className="hero-image-container">
               <img 
                 src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800" 
-                alt="KINETIC STRIDE Performance Shoe"
+                alt="SoleVibe Performance Shoe"
                 className="hero-image"
               />
               <div className="hero-glow"></div>

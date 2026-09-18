@@ -1,7 +1,7 @@
 {
-  "name": "zuxofit-shoe-store",
+  "name": "solevibe-shoe-store",
   "version": "1.0.0",
-  "description": "Shoe E-commerce Store with React",
+  "description": "SoleVibe shoe e-commerce store built with React",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",

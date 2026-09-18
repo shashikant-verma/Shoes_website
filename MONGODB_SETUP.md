@@ -1,6 +1,6 @@
-# 🗄️ MongoDB Setup Guide for KINETIC // STRIDE
+# 🗄️ MongoDB Setup Guide for SoleVibe
 
-Complete installation and configuration guide for MongoDB Community Server with KINETIC // STRIDE e-commerce platform.
+Complete installation and configuration guide for MongoDB Community Server with the SoleVibe e-commerce platform.
 
 ## 📋 Prerequisites
 
@@ -161,11 +161,11 @@ Create/update `.env` file in your project root:
 
 ```env
 # MongoDB Configuration
-MONGODB_URI=mongodb://127.0.0.1:27017/kinetic_stride
+MONGO_URI=mongodb://127.0.0.1:27017/solevibe
 DB_NAME=kinetic_stride
 
 # If using authentication:
-# MONGODB_URI=mongodb://kineticapp:securepassword123@127.0.0.1:27017/kinetic_stride
+# MONGO_URI=mongodb://kineticapp:securepassword123@127.0.0.1:27017/solevibe
 
 # Server Configuration
 PORT=5000

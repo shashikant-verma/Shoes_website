@@ -1,15 +1,20 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const path = require('path');
 const User = require('../models/User');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 
-// Load environment variables from parent directory
-dotenv.config({ path: '../.env' });
+// Load environment variables from the project root regardless of the launch directory.
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
+    const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+    if (!mongoUri) {
+      throw new Error('MongoDB connection string is missing. Set MONGO_URI or MONGODB_URI in .env.');
+    }
+    await mongoose.connect(mongoUri);
     console.log('🔗 MongoDB Connected for seeding');
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
