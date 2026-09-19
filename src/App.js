@@ -57,8 +57,8 @@ function App() {
           setCurrentUser(user);
           
           if (userTypeFromStorage === 'user') {
-            // Load user-specific data from localStorage
-            loadUserData(user.id);
+            // FIX 3: Pass isAuthenticatedUser=true explicitly — userType state is not yet set
+            loadUserData(user.id, true);
           }
         } else {
           // Token expired or invalid
@@ -71,23 +71,156 @@ function App() {
     initializeApp();
   }, []);
 
-  const loadUserData = (userId) => {
-    // Load cart from localStorage (temporary storage)
+  // FIX 3: Accept an explicit isAuthenticatedUser param so we never rely on stale userType state.
+  // Called both from initializeApp (where userType state hasn't been set yet) and handleLogin.
+  const loadUserData = async (userId, isAuthenticatedUser = false) => {
+    // Read any localStorage cart saved under this userId (guest migration)
+    let localCart = [];
     const savedCart = localStorage.getItem(`cart-${userId}`);
     if (savedCart) {
-      setCart(JSON.parse(savedCart));
-    }
-    
-    // Load wishlist from localStorage (temporary storage)
-    const savedWishlist = localStorage.getItem(`wishlist-${userId}`);
-    if (savedWishlist) {
-      setWishlist(JSON.parse(savedWishlist));
+      try {
+        localCart = JSON.parse(savedCart);
+      } catch {
+        localCart = [];
+      }
     }
 
-    // Load orders from localStorage (temporary storage)
+    // Also check the generic guest cart key in case the user added items before logging in
+    const guestCart = localStorage.getItem('cart-guest');
+    if (guestCart) {
+      try {
+        const guestItems = JSON.parse(guestCart);
+        // Merge guest items into localCart (avoid duplicates by product+size)
+        guestItems.forEach(guestItem => {
+          const exists = localCart.find(
+            i => (i.id || i._id) === (guestItem.id || guestItem._id) && i.size === guestItem.size
+          );
+          if (!exists) {
+            localCart.push(guestItem);
+          } else {
+            exists.quantity = (exists.quantity || 1) + (guestItem.quantity || 1);
+          }
+        });
+      } catch {
+        // ignore malformed guest cart
+      }
+    }
+
+    if (isAuthenticatedUser) {
+      // FIX 3: Use the explicit flag — not the stale userType state variable
+      try {
+        const cartService = require('./services/cartService').default;
+
+        // FIX 3: Migrate any local/guest cart items to MongoDB first
+        if (localCart.length > 0) {
+          const itemsToSync = localCart
+            .filter(item => item.id || item._id) // skip items without a product id
+            .map(item => ({
+              product: item.id || item._id,
+              quantity: item.quantity || 1,
+              size: item.size
+            }));
+
+          if (itemsToSync.length > 0) {
+            await cartService.addToCart(itemsToSync);
+          }
+          // Remove both localStorage keys after successful migration
+          localStorage.removeItem(`cart-${userId}`);
+          localStorage.removeItem('cart-guest');
+        }
+
+        // Fetch the merged cart from MongoDB
+        const cartResult = await cartService.getCart();
+        if (cartResult.success && cartResult.data && cartResult.data.data) {
+          // FIX 5: Ensure item._id is mapped to cartItemId, product._id to id
+          const dbCart = cartResult.data.data.items.map(item => {
+            if (!item.product) return null;
+            return {
+              ...item.product,          // spread product fields (name, price, image, stock…)
+              id: item.product._id,     // FIX 5: product._id → id (used as React key & lookup)
+              quantity: item.quantity,
+              size: item.size,
+              cartItemId: item._id      // FIX 5: cart subdoc _id → cartItemId (used by update/remove)
+            };
+          }).filter(Boolean);
+          setCart(dbCart);
+        } else {
+          // Backend call failed — fall back to local items
+          setCart(localCart);
+        }
+      } catch (error) {
+        console.error('Failed to load/sync cart from MongoDB:', error);
+        setCart(localCart);
+      }
+    } else {
+      // Guest: set cart directly from localStorage
+      setCart(localCart);
+    }
+
+    // Load legacy wishlist from localStorage
+    const legacyWishlistKey = `wishlist-${userId}`;
+    const legacyWishlistStr = localStorage.getItem(legacyWishlistKey);
+    let legacyWishlist = [];
+    if (legacyWishlistStr) {
+      try { legacyWishlist = JSON.parse(legacyWishlistStr); } catch { /* ignore */ }
+    }
+
+    // Load guest wishlist
+    const guestWishlistStr = localStorage.getItem('wishlist-guest');
+    let guestWishlist = [];
+    if (guestWishlistStr) {
+      try { guestWishlist = JSON.parse(guestWishlistStr); } catch { /* ignore */ }
+    }
+
+    if (isAuthenticatedUser) {
+      try {
+        const wishlistService = require('./services/wishlistService').default;
+        
+        // Merge strategy: Collect unique product IDs from legacy and guest wishlists
+        const productsToSync = new Set();
+        [...legacyWishlist, ...guestWishlist].forEach(item => {
+          if (item.id || item._id) {
+            productsToSync.add(item.id || item._id);
+          }
+        });
+
+        // Sync local items to MongoDB if any exist
+        if (productsToSync.size > 0) {
+          for (const productId of productsToSync) {
+             await wishlistService.addToWishlist(productId);
+          }
+          // Clear legacy/guest wishlists from localStorage after successful sync
+          localStorage.removeItem(legacyWishlistKey);
+          localStorage.removeItem('wishlist-guest');
+        }
+
+        // Fetch final merged wishlist from MongoDB
+        const wishlistResult = await wishlistService.getWishlist();
+        if (wishlistResult.success && wishlistResult.data && wishlistResult.data.items) {
+           const dbWishlist = wishlistResult.data.items.map(item => {
+             if (!item.product) return null;
+             return {
+               ...item.product,
+               id: item.product._id
+             };
+           }).filter(Boolean);
+           setWishlist(dbWishlist);
+        } else {
+           setWishlist(legacyWishlist);
+        }
+      } catch (error) {
+        console.error('Failed to load/sync wishlist from MongoDB:', error);
+        setWishlist(legacyWishlist);
+      }
+    } else {
+      // Guest: use guest wishlist, fallback to legacy if guest is empty
+      setWishlist(guestWishlist.length > 0 ? guestWishlist : legacyWishlist);
+    }
+
+    // Load orders from localStorage
     const savedOrders = localStorage.getItem(`orders-${userId}`);
     if (savedOrders) {
-      setOrders(JSON.parse(savedOrders));
+      try { setOrders(JSON.parse(savedOrders)); } catch { /* ignore */ }
     }
   };
 
@@ -95,9 +228,10 @@ function App() {
     setIsAuthenticated(true);
     setUserType(type);
     setCurrentUser(user);
-    
+
     if (type === 'user') {
-      loadUserData(user.id);
+      // FIX 3: Pass isAuthenticatedUser=true explicitly — userType state update is async
+      loadUserData(user.id, true);
     }
   };
 
@@ -130,13 +264,14 @@ function App() {
     setToast(prev => ({ ...prev, isVisible: false }));
   };
 
-  const handleAddToCart = (product) => {
-    if (userType !== 'user') return;
-    
+  const handleAddToCart = async (product) => {
+    // FIX 2: Guests are allowed. Only block admin accounts.
+    if (userType === 'admin') return;
+
     const itemKey = `${product.id}-${product.size}`;
     const existingItem = cart.find(item => `${item.id}-${item.size}` === itemKey);
     let updatedCart;
-    
+
     if (existingItem) {
       updatedCart = cart.map(item =>
         `${item.id}-${item.size}` === itemKey
@@ -146,28 +281,70 @@ function App() {
     } else {
       updatedCart = [...cart, { ...product, quantity: product.quantity || 1 }];
     }
-    
+
     setCart(updatedCart);
-    localStorage.setItem(`cart-${currentUser.id}`, JSON.stringify(updatedCart));
+
+    if (isAuthenticated && userType === 'user') {
+      // Authenticated user: sync to MongoDB
+      try {
+        const cartService = require('./services/cartService').default;
+        await cartService.addToCart([{
+          product: product.id || product._id,
+          quantity: product.quantity || 1,
+          size: product.size
+        }]);
+      } catch (error) {
+        console.error('Failed to sync add to cart with MongoDB:', error);
+      }
+    } else {
+      // FIX 2: Guest: persist to localStorage under 'cart-guest'
+      localStorage.setItem('cart-guest', JSON.stringify(updatedCart));
+    }
     showToast(`Added ${product.name} to cart!`, 'success');
   };
 
-  const handleUpdateCart = (itemId, newQuantity) => {
+  const handleUpdateCart = async (itemId, newQuantity) => {
+    // If it's authenticated, itemId might be the product id or cartItemId.
+    // In our map, we set cartItemId.
+    const cartItem = cart.find(item => item.id === itemId);
+    
     const updatedCart = cart.map(item =>
       item.id === itemId ? { ...item, quantity: newQuantity } : item
     );
     setCart(updatedCart);
-    localStorage.setItem(`cart-${currentUser.id}`, JSON.stringify(updatedCart));
+    
+    if (isAuthenticated && cartItem && cartItem.cartItemId) {
+      try {
+        const cartService = require('./services/cartService').default;
+        await cartService.updateCartItem(cartItem.cartItemId, newQuantity);
+      } catch (error) {
+        console.error('Failed to update cart item', error);
+      }
+    } else {
+      localStorage.setItem(`cart-${currentUser?.id || 'guest'}`, JSON.stringify(updatedCart));
+    }
   };
 
-  const handleRemoveFromCart = (itemId, itemSize) => {
+  const handleRemoveFromCart = async (itemId, itemSize) => {
+    const cartItem = cart.find(item => item.id === itemId && item.size === itemSize);
     const updatedCart = cart.filter(item => !(item.id === itemId && item.size === itemSize));
     setCart(updatedCart);
-    localStorage.setItem(`cart-${currentUser.id}`, JSON.stringify(updatedCart));
+    
+    if (isAuthenticated && cartItem && cartItem.cartItemId) {
+      try {
+        const cartService = require('./services/cartService').default;
+        await cartService.removeCartItem(cartItem.cartItemId);
+      } catch (error) {
+        console.error('Failed to remove cart item', error);
+      }
+    } else {
+      localStorage.setItem(`cart-${currentUser?.id || 'guest'}`, JSON.stringify(updatedCart));
+    }
   };
 
-  const handleAddToWishlist = (product) => {
-    if (userType !== 'user') return;
+  const handleAddToWishlist = async (product) => {
+    // Only block admins from using wishlist
+    if (userType === 'admin') return;
     
     const exists = wishlist.find(item => item.id === product.id);
     if (exists) {
@@ -177,26 +354,61 @@ function App() {
     
     const updatedWishlist = [...wishlist, product];
     setWishlist(updatedWishlist);
-    localStorage.setItem(`wishlist-${currentUser.id}`, JSON.stringify(updatedWishlist));
+    
+    if (isAuthenticated && userType === 'user') {
+      try {
+        const wishlistService = require('./services/wishlistService').default;
+        await wishlistService.addToWishlist(product.id || product._id);
+      } catch (error) {
+        console.error('Failed to sync add to wishlist with MongoDB:', error);
+      }
+    } else {
+      localStorage.setItem('wishlist-guest', JSON.stringify(updatedWishlist));
+    }
     showToast(`Added ${product.name} to wishlist!`, 'success');
   };
 
-  const handleRemoveFromWishlist = (productId) => {
+  const handleRemoveFromWishlist = async (productId) => {
     const updatedWishlist = wishlist.filter(item => item.id !== productId);
     setWishlist(updatedWishlist);
-    localStorage.setItem(`wishlist-${currentUser.id}`, JSON.stringify(updatedWishlist));
+    
+    if (isAuthenticated && userType === 'user') {
+      try {
+        const wishlistService = require('./services/wishlistService').default;
+        await wishlistService.removeFromWishlist(productId);
+      } catch (error) {
+        console.error('Failed to remove wishlist item from MongoDB', error);
+      }
+    } else {
+      localStorage.setItem('wishlist-guest', JSON.stringify(updatedWishlist));
+    }
   };
 
-  const handleOrderComplete = (order) => {
+  const handleOrderComplete = async (order) => {
     // Add order to orders list
     const updatedOrders = [order, ...orders];
     setOrders(updatedOrders);
     localStorage.setItem(`orders-${currentUser.id}`, JSON.stringify(updatedOrders));
-    
-    // Clear the cart
+
+    // Clear local cart state and localStorage immediately
     setCart([]);
     localStorage.removeItem(`cart-${currentUser.id}`);
-    
+    localStorage.removeItem('cart-guest');
+
+    // FIX 6: Clear MongoDB cart — surface failure visibly, not silently
+    if (isAuthenticated && userType === 'user') {
+      try {
+        const cartService = require('./services/cartService').default;
+        const clearResult = await cartService.clearCart();
+        if (!clearResult.success) {
+          // Log clearly — the cart document on the server was not cleared
+          console.error('[Cart] MongoDB cart clear failed after checkout:', clearResult.message);
+        }
+      } catch (error) {
+        console.error('[Cart] MongoDB cart clear threw an exception after checkout:', error);
+      }
+    }
+
     // Set completed order and navigate to confirmation
     setCompletedOrder(order);
     setCurrentPage('order-confirmation');
@@ -261,6 +473,19 @@ function App() {
     setSelectedProduct(null);
   };
 
+  const handleToggleWishlist = (product, e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    const exists = wishlist.some(item => item.id === product.id);
+    if (exists) {
+      handleRemoveFromWishlist(product.id);
+    } else {
+      handleAddToWishlist(product);
+    }
+  };
+
   if (loading) {
     return (
       <div className="App">
@@ -303,6 +528,8 @@ function App() {
           categoryFilter="all"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          wishlist={wishlist}
+          onToggleWishlist={handleToggleWishlist}
         />
       )}
       
@@ -311,6 +538,8 @@ function App() {
           onAddToCart={handleAddToCart} 
           categoryFilter={categoryFilter}
           onProductClick={handleProductClick}
+          wishlist={wishlist}
+          onToggleWishlist={handleToggleWishlist}
         />
       )}
 
@@ -321,6 +550,8 @@ function App() {
           categoryFilter="men"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          wishlist={wishlist}
+          onToggleWishlist={handleToggleWishlist}
         />
       )}
 
@@ -331,6 +562,8 @@ function App() {
           categoryFilter="women"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          wishlist={wishlist}
+          onToggleWishlist={handleToggleWishlist}
         />
       )}
 
@@ -342,6 +575,8 @@ function App() {
           saleMode={true}
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          wishlist={wishlist}
+          onToggleWishlist={handleToggleWishlist}
         />
       )}
 
@@ -352,6 +587,8 @@ function App() {
           categoryFilter="running"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          wishlist={wishlist}
+          onToggleWishlist={handleToggleWishlist}
         />
       )}
 
@@ -362,6 +599,8 @@ function App() {
           categoryFilter="training"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          wishlist={wishlist}
+          onToggleWishlist={handleToggleWishlist}
         />
       )}
 
@@ -372,6 +611,8 @@ function App() {
           categoryFilter="trail"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          wishlist={wishlist}
+          onToggleWishlist={handleToggleWishlist}
         />
       )}
 
@@ -382,6 +623,8 @@ function App() {
           categoryFilter="racing"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          wishlist={wishlist}
+          onToggleWishlist={handleToggleWishlist}
         />
       )}
 
@@ -392,6 +635,8 @@ function App() {
           categoryFilter="new"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          wishlist={wishlist}
+          onToggleWishlist={handleToggleWishlist}
         />
       )}
       

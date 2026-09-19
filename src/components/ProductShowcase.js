@@ -4,7 +4,7 @@ import productService from '../services/productService';
 import ProductCard from './ProductCard';
 import ProductSkeleton from './ProductSkeleton';
 
-function ProductShowcase({ onAddToCart, categoryFilter, onProductClick }) {
+function ProductShowcase({ onAddToCart, categoryFilter, onProductClick, wishlist = [], onToggleWishlist }) {
   const [selectedCategory, setSelectedCategory] = useState(categoryFilter || 'all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('featured');
@@ -290,6 +290,8 @@ function ProductShowcase({ onAddToCart, categoryFilter, onProductClick }) {
                 product={product}
                 index={index}
                 onProductClick={onProductClick}
+                isInWishlist={wishlist.some(item => item.id === product.id)}
+                onToggleWishlist={onToggleWishlist}
               />
             ))}
           </div>

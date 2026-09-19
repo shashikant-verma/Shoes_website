@@ -9,7 +9,9 @@ function CollectionPage({
   saleMode = false,
   heroImage,
   onAddToCart, 
-  onProductClick 
+  onProductClick,
+  wishlist = [],
+  onToggleWishlist
 }) {
   const initialSubcategory = categoryFilter === 'racing' ? 'road-racing' :
     ['running', 'training', 'trail', 'lifestyle'].includes(categoryFilter) ? categoryFilter : 'all';
@@ -459,8 +461,13 @@ function CollectionPage({
                       </div>
                       
                       {/* Wishlist Button */}
-                      <button className="wishlist-btn" title="Add to Wishlist">
-                        ♡
+                      <button 
+                        className={`wishlist-btn ${wishlist.some(item => item.id === product.id) ? 'active' : ''}`} 
+                        title="Add to Wishlist"
+                        onClick={(e) => onToggleWishlist(product, e)}
+                        style={{ color: wishlist.some(item => item.id === product.id) ? '#e74c3c' : 'inherit' }}
+                      >
+                        {wishlist.some(item => item.id === product.id) ? '♥' : '♡'}
                       </button>
 
                       {/* Quick Actions */}

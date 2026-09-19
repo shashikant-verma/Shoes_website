@@ -1,6 +1,6 @@
 import React from 'react';
 
-function ProductCard({ product, onProductClick, index = 0 }) {
+function ProductCard({ product, onProductClick, index = 0, isInWishlist = false, onToggleWishlist }) {
   const rating = Number(product.rating) || 0;
   const reviewCount = Number(product.reviews ?? product.reviewCount) || 0;
   const badge = product.badge || (product.stock === 0 ? 'SOLD OUT' : 'NEW');
@@ -23,6 +23,34 @@ function ProductCard({ product, onProductClick, index = 0 }) {
       <div className={`product-badge badge-${product.badgeColor || 'primary'}`}>
         <span className="telemetry-label">{badge}</span>
       </div>
+
+      {/* Wishlist Button */}
+      <button 
+        className={`wishlist-btn-card ${isInWishlist ? 'active' : ''}`} 
+        title="Add to Wishlist"
+        onClick={(e) => onToggleWishlist && onToggleWishlist(product, e)}
+        style={{ 
+          position: 'absolute', 
+          top: '10px', 
+          right: '10px', 
+          zIndex: 10,
+          background: 'rgba(255,255,255,0.8)',
+          border: 'none',
+          borderRadius: '50%',
+          width: '36px',
+          height: '36px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          color: isInWishlist ? '#e74c3c' : '#333',
+          fontSize: '20px',
+          boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+        }}
+        aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
+      >
+        {isInWishlist ? '♥' : '♡'}
+      </button>
 
       <div className="product-image-container">
         <img

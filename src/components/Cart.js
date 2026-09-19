@@ -61,7 +61,7 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
           product: item.id || item._id,
           name: item.name,
           image: item.image,
-          price: item.price,
+          // FIX 7: price intentionally omitted — backend recalculates from MongoDB
           quantity: item.quantity,
           size: item.size,
           category: item.category

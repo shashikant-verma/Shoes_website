@@ -159,9 +159,14 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
                 </div>
                 <div className="user-menu-divider"></div>
                 {userType === 'user' && (
-                  <button className="user-menu-item" onClick={() => handleNavClick('orders')}>
-                    My Orders
-                  </button>
+                  <>
+                    <button className="user-menu-item" onClick={() => handleNavClick('orders')}>
+                      My Orders
+                    </button>
+                    <button className="user-menu-item" onClick={() => handleNavClick('addresses')}>
+                      My Addresses
+                    </button>
+                  </>
                 )}
                 <button className="user-menu-item" onClick={onLogout}>
                   Sign Out
