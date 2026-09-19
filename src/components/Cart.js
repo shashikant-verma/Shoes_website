@@ -153,11 +153,11 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
                   <div className="cart-item-specs">
                     <div className="spec-badge">
                       <span className="telemetry-label">WEIGHT</span>
-                      <span className="body-sm">{item.specs.weight}</span>
+                      <span className="body-sm">{item.specifications?.weight || item.specs?.weight || '290g'}</span>
                     </div>
                     <div className="spec-badge">
                       <span className="telemetry-label">ENERGY</span>
-                      <span className="body-sm">{item.specs.energy}</span>
+                      <span className="body-sm">{item.specifications?.energy || item.specs?.energy || '85%'}</span>
                     </div>
                   </div>
 

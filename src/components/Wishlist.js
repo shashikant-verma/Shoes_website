@@ -59,9 +59,9 @@ function Wishlist({ wishlist, onRemoveFromWishlist, onProductClick, onAddToCart 
                 </div>
 
                 <div className="wishlist-specs">
-                  <span className="telemetry-label">{product.specs.weight}</span>
+                  <span className="telemetry-label">{product.specifications?.weight || 'N/A'}</span>
                   <span className="spec-dot">•</span>
-                  <span className="telemetry-label">{product.specs.energy}</span>
+                  <span className="telemetry-label">{product.specifications?.energy || 'N/A'}</span>
                 </div>
 
                 <div className="wishlist-footer">

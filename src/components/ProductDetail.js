@@ -7,7 +7,7 @@ function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWis
   const [isAdding, setIsAdding] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [sizeError, setSizeError] = useState(false);
-  const specs = product.specs || {};
+  const specs = product.specifications || {};
   const features = product.features || [];
 
   const sizes = product.sizes || [];
