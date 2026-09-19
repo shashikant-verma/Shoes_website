@@ -179,6 +179,7 @@ function ProductFormModal({ product, onClose, onSave }) {
       newErrors.colors = 'At least one color is required';
     }
 
+    console.log('Form validation errors:', newErrors); // Debug log
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -195,7 +196,11 @@ function ProductFormModal({ product, onClose, onSave }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    console.log('Form submission started'); // Debug log
+    console.log('Form data:', formData); // Debug log
+    
     if (!validateForm()) {
+      console.log('Form validation failed'); // Debug log
       return;
     }
 
@@ -222,16 +227,24 @@ function ProductFormModal({ product, onClose, onSave }) {
         }
       });
 
+      console.log('Cleaned data for API:', cleanedData); // Debug log
+
       let result;
       if (product) {
+        console.log('Updating product:', product._id); // Debug log
         result = await productService.updateProduct(product._id, cleanedData);
       } else {
+        console.log('Creating new product'); // Debug log
         result = await productService.createProduct(cleanedData);
       }
 
+      console.log('API result:', result); // Debug log
+
       if (result.success) {
+        console.log('Product saved successfully'); // Debug log
         onSave(!!product, formData.name); // Pass isEdit flag and product name
       } else {
+        console.log('API returned error:', result); // Debug log
         // Handle specific error cases
         if (result.message.includes('already exists')) {
           if (result.message.includes('sku')) {
