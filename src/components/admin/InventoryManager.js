@@ -1,285 +1,596 @@
 import React, { useState, useEffect } from 'react';
 import './InventoryManager.css';
-import productService from '../../services/productService';
-
-const STOCK_THRESHOLDS = { critical: 3, low: 10, medium: 25 };
-
-function getStockLevel(stock) {
-  if (stock === 0) return 'out-of-stock';
-  if (stock <= STOCK_THRESHOLDS.critical) return 'critical';
-  if (stock <= STOCK_THRESHOLDS.low) return 'low';
-  if (stock <= STOCK_THRESHOLDS.medium) return 'medium';
-  return 'healthy';
-}
-
-function getStockLabel(stock) {
-  const level = getStockLevel(stock);
-  return {
-    'out-of-stock': 'Out of Stock',
-    critical: 'Critical',
-    low: 'Low',
-    medium: 'Medium',
-    healthy: 'In Stock'
-  }[level];
-}
+import inventoryService from '../../services/inventoryService';
 
 function InventoryManager() {
   const [products, setProducts] = useState([]);
+  const [summary, setSummary] = useState({
+    totalProducts: 0,
+    inStockCount: 0,
+    lowStockCount: 0,
+    outOfStockCount: 0,
+    totalQuantity: 0,
+    lowStockThreshold: 5
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Filters & Pagination
   const [searchQuery, setSearchQuery] = useState('');
-  const [stockFilter, setStockFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [sortBy, setSortBy] = useState('stock-asc');
-  const [editingStock, setEditingStock] = useState(null); // { id, value }
+  const [sortBy, setSortBy] = useState('stock');
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [categories, setCategories] = useState([]);
+
+  // Modals
+  const [selectedProduct, setSelectedProduct] = useState(null); // For adjustment modal
+  const [adjustChange, setAdjustChange] = useState(1);
+  const [adjustMode, setAdjustMode] = useState('add'); // 'add' or 'subtract'
+  const [adjustReason, setAdjustReason] = useState('STOCK_IN');
+  const [adjustNote, setAdjustNote] = useState('');
+  const [isSubmittingAdjust, setIsSubmittingAdjust] = useState(false);
+
+  const [historyProduct, setHistoryProduct] = useState(null); // For history modal
+  const [historyLogs, setHistoryLogs] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
   const [toast, setToast] = useState(null);
-  const [saving, setSaving] = useState(null);
+
+  const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
-    loadProducts();
-  }, []);
+    loadInventory();
+  }, [currentPage, statusFilter, categoryFilter, sortBy, sortOrder]);
 
-  const loadProducts = async () => {
+  const loadInventory = async () => {
     setLoading(true);
     try {
-      const result = await productService.getProducts({ limit: 200 });
-      if (result.success) {
-        setProducts(result.data.data || []);
+      const params = {
+        page: currentPage,
+        limit: ITEMS_PER_PAGE,
+        search: searchQuery,
+        status: statusFilter,
+        category: categoryFilter,
+        sortBy,
+        sortOrder
+      };
+
+      const result = await inventoryService.getInventory(params);
+      if (result.success && result.data?.data) {
+        const payload = result.data.data;
+        setProducts(payload.products || []);
+        if (payload.pagination) {
+          setTotalPages(payload.pagination.totalPages || 1);
+        }
+        if (payload.summary) {
+          setSummary(payload.summary);
+        }
+        // Collect categories
+        if (payload.products) {
+          const cats = [...new Set(payload.products.map(p => p.category).filter(Boolean))];
+          setCategories(prev => [...new Set([...prev, ...cats])]);
+        }
         setError(null);
       } else {
-        setError(result.message);
+        setError(result.message || 'Failed to load inventory');
+        setProducts([]);
       }
-    } catch (err) {
-      setError('Failed to load inventory');
+    } catch {
+      setError('Error connecting to inventory server');
+      setProducts([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setCurrentPage(1);
+    loadInventory();
+  };
+
   const showToast = (msg, type) => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 3500);
   };
 
-  const handleStockEdit = (product) => {
-    setEditingStock({ id: product._id, value: String(product.stock) });
+  // Open adjustment modal
+  const openAdjustmentModal = (product) => {
+    setSelectedProduct(product);
+    setAdjustMode('add');
+    setAdjustChange(1);
+    setAdjustReason('STOCK_IN');
+    setAdjustNote('');
   };
 
-  const handleStockSave = async (product) => {
-    const newStock = parseInt(editingStock.value, 10);
-    if (isNaN(newStock) || newStock < 0) {
-      showToast('Please enter a valid stock value (0 or above)', 'error');
+  // Submit stock adjustment
+  const handleSaveAdjustment = async (e) => {
+    e.preventDefault();
+    if (!selectedProduct) return;
+
+    const rawChange = Math.abs(parseInt(adjustChange, 10));
+    if (isNaN(rawChange) || rawChange <= 0) {
+      showToast('Adjustment quantity must be a positive integer', 'error');
       return;
     }
-    setSaving(product._id);
+
+    const finalChange = adjustMode === 'add' ? rawChange : -rawChange;
+    const projectedStock = (selectedProduct.stock || 0) + finalChange;
+
+    if (projectedStock < 0) {
+      showToast(`Cannot reduce stock below 0! Current: ${selectedProduct.stock}, Reduction: ${rawChange}`, 'error');
+      return;
+    }
+
+    setIsSubmittingAdjust(true);
     try {
-      const result = await productService.updateProduct(product._id, { stock: newStock });
-      if (result.success) {
-        setProducts(prev => prev.map(p => p._id === product._id ? { ...p, stock: newStock } : p));
-        showToast(`Stock updated to ${newStock} for "${product.name}"`, 'success');
+      const payload = {
+        change: finalChange,
+        reason: adjustReason,
+        note: adjustNote || `Manual stock adjustment (${finalChange > 0 ? '+' : ''}${finalChange})`
+      };
+
+      const result = await inventoryService.adjustStock(selectedProduct._id, payload);
+      if (result.success && result.data?.data) {
+        const updatedProd = result.data.data.product;
+        setProducts(prev => prev.map(p => p._id === updatedProd._id ? updatedProd : p));
+        showToast(`Stock updated to ${updatedProd.stock} for "${updatedProd.name}"`, 'success');
+        setSelectedProduct(null);
+        loadInventory(); // Refresh stats
       } else {
         showToast(result.message || 'Failed to update stock', 'error');
       }
     } catch {
-      showToast('Failed to update stock', 'error');
+      showToast('Error sending stock adjustment request', 'error');
     } finally {
-      setSaving(null);
-      setEditingStock(null);
+      setIsSubmittingAdjust(false);
     }
   };
 
-  const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
+  // Open inventory history modal
+  const openHistoryModal = async (product) => {
+    setHistoryProduct(product);
+    setLoadingHistory(true);
+    setHistoryLogs([]);
 
-  const filteredProducts = products
-    .filter(p => {
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        if (!p.name?.toLowerCase().includes(q) && !p.brand?.toLowerCase().includes(q)) return false;
+    try {
+      const result = await inventoryService.getInventoryHistory(product._id);
+      if (result.success && result.data?.data) {
+        setHistoryLogs(result.data.data || []);
+      } else {
+        showToast('Failed to fetch transaction history', 'error');
       }
-      if (categoryFilter && p.category !== categoryFilter) return false;
-      if (stockFilter) {
-        const level = getStockLevel(p.stock);
-        if (stockFilter === 'out-of-stock' && level !== 'out-of-stock') return false;
-        if (stockFilter === 'critical' && !['out-of-stock', 'critical'].includes(level)) return false;
-        if (stockFilter === 'low' && !['out-of-stock', 'critical', 'low'].includes(level)) return false;
-        if (stockFilter === 'healthy' && level !== 'healthy') return false;
-      }
-      return true;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'stock-asc') return (a.stock || 0) - (b.stock || 0);
-      if (sortBy === 'stock-desc') return (b.stock || 0) - (a.stock || 0);
-      if (sortBy === 'name') return a.name?.localeCompare(b.name);
-      return 0;
-    });
+    } catch {
+      showToast('Error loading history logs', 'error');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
-  // Inventory summary
-  const summary = {
-    total: products.length,
-    outOfStock: products.filter(p => p.stock === 0).length,
-    critical: products.filter(p => getStockLevel(p.stock) === 'critical').length,
-    low: products.filter(p => getStockLevel(p.stock) === 'low').length,
-    healthy: products.filter(p => getStockLevel(p.stock) === 'healthy').length,
-    totalUnits: products.reduce((s, p) => s + (p.stock || 0), 0),
+  const getStatusBadge = (stock) => {
+    if (stock === 0) return <span className="inv-badge badge-oos">OUT OF STOCK</span>;
+    if (stock <= (summary.lowStockThreshold || 5)) return <span className="inv-badge badge-low">LOW STOCK</span>;
+    return <span className="inv-badge badge-in">IN STOCK</span>;
+  };
+
+  const getTransactionTypeBadge = (type) => {
+    const map = {
+      STOCK_IN: 'inv-type-in',
+      STOCK_OUT: 'inv-type-out',
+      ADJUSTMENT: 'inv-type-adj',
+      RETURN: 'inv-type-return',
+      ORDER: 'inv-type-order',
+      DAMAGE: 'inv-type-damage',
+      CORRECTION: 'inv-type-correction'
+    };
+    return <span className={`inv-type-pill ${map[type] || 'inv-type-adj'}`}>{type}</span>;
   };
 
   const formatCurrency = (amount) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(amount || 0);
 
+  const formatDate = (d) => new Date(d).toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
   return (
     <div className="inv-page">
-      {toast && <div className={`inv-toast inv-toast-${toast.type}`}>{toast.type === 'success' ? '✅' : '❌'} {toast.msg}</div>}
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`inv-toast inv-toast-${toast.type}`}>
+          {toast.type === 'success' ? '✅' : '❌'} {toast.msg}
+        </div>
+      )}
 
       {/* Header */}
       <div className="inv-header">
         <div>
-          <h1 className="inv-title">Inventory</h1>
-          <p className="inv-subtitle">Real-time stock management for {summary.total} products</p>
+          <h1 className="inv-title">Inventory Management System</h1>
+          <p className="inv-subtitle">Authoritative product stock monitoring, adjustment & audit trail</p>
         </div>
-        <button className="inv-refresh-btn" onClick={loadProducts}>↻ Refresh</button>
+        <button className="inv-refresh-btn" onClick={loadInventory}>
+          <span>↻</span> Refresh Dashboard
+        </button>
       </div>
 
-      {/* Summary Stats */}
-      <div className="inv-stats">
-        <div className="inv-stat">
+      {/* Stat Summary Cards */}
+      <div className="inv-stats-grid">
+        <div className="inv-stat-card">
           <div className="inv-stat-icon">📦</div>
-          <div className="inv-stat-val">{summary.total}</div>
-          <div className="inv-stat-label">Total Products</div>
+          <div>
+            <div className="inv-stat-val">{summary.totalProducts}</div>
+            <div className="inv-stat-label">Total Products</div>
+          </div>
         </div>
-        <div className="inv-stat inv-stat-alert">
-          <div className="inv-stat-icon">🚫</div>
-          <div className="inv-stat-val inv-val-danger">{summary.outOfStock}</div>
-          <div className="inv-stat-label">Out of Stock</div>
-        </div>
-        <div className="inv-stat inv-stat-warn">
-          <div className="inv-stat-icon">⚠️</div>
-          <div className="inv-stat-val inv-val-warn">{summary.critical + summary.low}</div>
-          <div className="inv-stat-label">Low / Critical</div>
-        </div>
-        <div className="inv-stat inv-stat-good">
+        <div className="inv-stat-card card-good">
           <div className="inv-stat-icon">✅</div>
-          <div className="inv-stat-val inv-val-good">{summary.healthy}</div>
-          <div className="inv-stat-label">Healthy Stock</div>
+          <div>
+            <div className="inv-stat-val val-good">{summary.inStockCount}</div>
+            <div className="inv-stat-label">In Stock (&gt; {summary.lowStockThreshold})</div>
+          </div>
         </div>
-        <div className="inv-stat">
+        <div className="inv-stat-card card-warn">
+          <div className="inv-stat-icon">⚠️</div>
+          <div>
+            <div className="inv-stat-val val-warn">{summary.lowStockCount}</div>
+            <div className="inv-stat-label">Low Stock (1 - {summary.lowStockThreshold})</div>
+          </div>
+        </div>
+        <div className="inv-stat-card card-danger">
+          <div className="inv-stat-icon">🚫</div>
+          <div>
+            <div className="inv-stat-val val-danger">{summary.outOfStockCount}</div>
+            <div className="inv-stat-label">Out of Stock (0)</div>
+          </div>
+        </div>
+        <div className="inv-stat-card">
           <div className="inv-stat-icon">🔢</div>
-          <div className="inv-stat-val">{summary.totalUnits.toLocaleString()}</div>
-          <div className="inv-stat-label">Total Units</div>
+          <div>
+            <div className="inv-stat-val">{summary.totalQuantity.toLocaleString()}</div>
+            <div className="inv-stat-label">Total Warehouse Units</div>
+          </div>
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Controls & Filters Toolbar */}
       <div className="inv-toolbar">
-        <div className="inv-search">
-          <span>🔍</span>
+        <form className="inv-search-form" onSubmit={handleSearchSubmit}>
+          <span className="inv-search-icon">🔍</span>
           <input
             type="text"
-            placeholder="Search products..."
+            placeholder="Search by Product Name, SKU, Brand..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="inv-search-input"
           />
+          <button type="submit" className="inv-search-btn">Search</button>
+        </form>
+
+        <div className="inv-filters-group">
+          <select
+            className="inv-select"
+            value={statusFilter}
+            onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+          >
+            <option value="">All Stock Statuses</option>
+            <option value="IN_STOCK">In Stock (&gt; {summary.lowStockThreshold})</option>
+            <option value="LOW_STOCK">Low Stock (1 - {summary.lowStockThreshold})</option>
+            <option value="OUT_OF_STOCK">Out of Stock (0)</option>
+          </select>
+
+          <select
+            className="inv-select"
+            value={categoryFilter}
+            onChange={e => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
+          >
+            <option value="">All Categories</option>
+            {categories.map(c => (
+              <option key={c} value={c}>{c.toUpperCase()}</option>
+            ))}
+          </select>
+
+          <select
+            className="inv-select"
+            value={`${sortBy}-${sortOrder}`}
+            onChange={e => {
+              const [sb, so] = e.target.value.split('-');
+              setSortBy(sb);
+              setSortOrder(so);
+              setCurrentPage(1);
+            }}
+          >
+            <option value="stock-asc">Stock: Low → High</option>
+            <option value="stock-desc">Stock: High → Low</option>
+            <option value="name-asc">Name A → Z</option>
+            <option value="updatedAt-desc">Recently Updated</option>
+          </select>
         </div>
-        <select className="inv-filter-sel" value={stockFilter} onChange={e => setStockFilter(e.target.value)}>
-          <option value="">All Stock Levels</option>
-          <option value="out-of-stock">Out of Stock</option>
-          <option value="critical">Critical (≤ 3)</option>
-          <option value="low">Low (≤ 10)</option>
-          <option value="healthy">Healthy</option>
-        </select>
-        <select className="inv-filter-sel" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
-          <option value="">All Categories</option>
-          {categories.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
-        </select>
-        <select className="inv-filter-sel" value={sortBy} onChange={e => setSortBy(e.target.value)}>
-          <option value="stock-asc">Stock: Low → High</option>
-          <option value="stock-desc">Stock: High → Low</option>
-          <option value="name">Name A → Z</option>
-        </select>
       </div>
 
-      {/* Content */}
+      {/* Main Table View */}
       {loading ? (
-        <div className="inv-loading"><div className="inv-spinner"></div><p>Loading inventory...</p></div>
+        <div className="inv-loading">
+          <div className="inv-spinner"></div>
+          <p>Loading inventory items...</p>
+        </div>
       ) : error ? (
-        <div className="inv-error"><span>⚠️</span><h3>{error}</h3><button onClick={loadProducts}>Try Again</button></div>
-      ) : filteredProducts.length === 0 ? (
+        <div className="inv-error">
+          <span>⚠️</span>
+          <h3>{error}</h3>
+          <button onClick={loadInventory}>Try Again</button>
+        </div>
+      ) : products.length === 0 ? (
         <div className="inv-empty">
           <div className="inv-empty-icon">📦</div>
-          <h3>No products found</h3>
-          <p>Try changing your filters.</p>
+          <h3>No matching inventory records found</h3>
+          <p>Try resetting filters or adjusting search keywords.</p>
         </div>
       ) : (
-        <div className="inv-table-wrap">
-          <table className="inv-table">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Category</th>
-                <th>Price</th>
-                <th>Stock</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProducts.map(product => {
-                const level = getStockLevel(product.stock);
-                const isEditing = editingStock?.id === product._id;
-                return (
-                  <tr key={product._id} className={`inv-row ${level === 'out-of-stock' ? 'row-oos' : level === 'critical' ? 'row-critical' : ''}`}>
+        <>
+          <div className="inv-table-wrap">
+            <table className="inv-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>SKU</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th>Current Stock</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map(product => (
+                  <tr key={product._id} className="inv-row">
                     <td>
-                      <div className="inv-product-cell">
-                        {product.image && <img src={product.image} alt={product.name} className="inv-product-img" />}
+                      <div className="inv-prod-cell">
+                        {product.image && (
+                          <img src={product.image} alt={product.name} className="inv-prod-img" />
+                        )}
                         <div>
-                          <div className="inv-product-name">{product.name}</div>
-                          <div className="inv-product-brand">{product.brand || '—'}</div>
+                          <div className="inv-prod-name">{product.name}</div>
+                          <div className="inv-prod-brand">{product.brand || 'SoleVibe'}</div>
                         </div>
                       </div>
                     </td>
-                    <td><span className="inv-category">{product.category || '—'}</span></td>
+                    <td><span className="inv-sku">{product.sku || 'N/A'}</span></td>
+                    <td><span className="inv-cat">{product.category || '—'}</span></td>
                     <td><span className="inv-price">{formatCurrency(product.price)}</span></td>
                     <td>
-                      {isEditing ? (
-                        <div className="inv-stock-edit">
-                          <input
-                            type="number"
-                            value={editingStock.value}
-                            onChange={e => setEditingStock(p => ({ ...p, value: e.target.value }))}
-                            className="inv-stock-input"
-                            min="0"
-                            autoFocus
-                            onKeyDown={e => { if (e.key === 'Enter') handleStockSave(product); if (e.key === 'Escape') setEditingStock(null); }}
-                          />
-                          <button className="inv-save-btn" onClick={() => handleStockSave(product)} disabled={saving === product._id}>
-                            {saving === product._id ? '...' : '✓'}
-                          </button>
-                          <button className="inv-cancel-btn" onClick={() => setEditingStock(null)}>✕</button>
-                        </div>
-                      ) : (
-                        <div className="inv-stock-display">
-                          <div className={`inv-stock-bar-wrap`}>
-                            <div className={`inv-stock-bar inv-bar-${level}`} style={{ width: `${Math.min(100, (product.stock / 50) * 100)}%` }}></div>
-                          </div>
-                          <span className={`inv-stock-num inv-num-${level}`}>{product.stock}</span>
-                        </div>
-                      )}
+                      <div className="inv-stock-num">
+                        <span className={`inv-qty-pill ${product.stock === 0 ? 'qty-zero' : product.stock <= (summary.lowStockThreshold || 5) ? 'qty-low' : 'qty-ok'}`}>
+                          {product.stock} units
+                        </span>
+                      </div>
                     </td>
+                    <td>{getStatusBadge(product.stock)}</td>
                     <td>
-                      <span className={`inv-status-badge inv-status-${level}`}>{getStockLabel(product.stock)}</span>
-                    </td>
-                    <td>
-                      {!isEditing && (
-                        <button className="inv-edit-btn" onClick={() => handleStockEdit(product)}>
-                          ✏️ Edit Stock
+                      <div className="inv-actions">
+                        <button
+                          className="inv-btn-adjust"
+                          onClick={() => openAdjustmentModal(product)}
+                        >
+                          ✏️ Adjust Stock
                         </button>
-                      )}
+                        <button
+                          className="inv-btn-history"
+                          onClick={() => openHistoryModal(product)}
+                        >
+                          📜 View History
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="inv-pagination">
+              <button
+                className="inv-page-btn"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+              >
+                ← Prev
+              </button>
+              <span className="inv-page-info">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                className="inv-page-btn"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Stock Adjustment Modal */}
+      {selectedProduct && (
+        <div className="inv-modal-overlay" onClick={() => setSelectedProduct(null)}>
+          <div className="inv-modal" onClick={e => e.stopPropagation()}>
+            <div className="inv-modal-header">
+              <div>
+                <h2>Adjust Product Stock</h2>
+                <p>{selectedProduct.name} • SKU: {selectedProduct.sku || 'N/A'}</p>
+              </div>
+              <button className="inv-modal-close" onClick={() => setSelectedProduct(null)}>✕</button>
+            </div>
+
+            <form onSubmit={handleSaveAdjustment} className="inv-modal-body">
+              <div className="inv-stock-compare-box">
+                <div className="compare-item">
+                  <span className="compare-label">Current Stock</span>
+                  <span className="compare-val">{selectedProduct.stock}</span>
+                </div>
+                <div className="compare-arrow">➔</div>
+                <div className="compare-item">
+                  <span className="compare-label">Projected Stock</span>
+                  <span className={`compare-val ${
+                    (selectedProduct.stock + (adjustMode === 'add' ? Number(adjustChange) : -Number(adjustChange))) < 0
+                      ? 'val-invalid'
+                      : 'val-projected'
+                  }`}>
+                    {selectedProduct.stock + (adjustMode === 'add' ? Number(adjustChange) : -Number(adjustChange))}
+                  </span>
+                </div>
+              </div>
+
+              <div className="inv-form-group">
+                <label>Adjustment Mode:</label>
+                <div className="inv-mode-toggle">
+                  <button
+                    type="button"
+                    className={`mode-btn ${adjustMode === 'add' ? 'active-add' : ''}`}
+                    onClick={() => { setAdjustMode('add'); setAdjustReason('STOCK_IN'); }}
+                  >
+                    ➕ Add Stock (Stock In)
+                  </button>
+                  <button
+                    type="button"
+                    className={`mode-btn ${adjustMode === 'subtract' ? 'active-sub' : ''}`}
+                    onClick={() => { setAdjustMode('subtract'); setAdjustReason('STOCK_OUT'); }}
+                  >
+                    ➖ Reduce Stock (Stock Out)
+                  </button>
+                </div>
+              </div>
+
+              <div className="inv-form-group">
+                <label>Quantity Change:</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="inv-modal-input"
+                  value={adjustChange}
+                  onChange={e => setAdjustChange(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="inv-form-group">
+                <label>Reason for Adjustment:</label>
+                <select
+                  className="inv-modal-select"
+                  value={adjustReason}
+                  onChange={e => setAdjustReason(e.target.value)}
+                >
+                  <option value="STOCK_IN">STOCK_IN (New Shipment Received)</option>
+                  <option value="STOCK_OUT">STOCK_OUT (Manual Stock Removal)</option>
+                  <option value="ADJUSTMENT">ADJUSTMENT (General Correction)</option>
+                  <option value="DAMAGE">DAMAGE (Damaged / Defective Stock)</option>
+                  <option value="CORRECTION">CORRECTION (Audit Correction)</option>
+                </select>
+              </div>
+
+              <div className="inv-form-group">
+                <label>Audit Note / Reference (Optional):</label>
+                <input
+                  type="text"
+                  className="inv-modal-input"
+                  placeholder="e.g., Shipment PO #4920 or Warehouse Audit..."
+                  value={adjustNote}
+                  onChange={e => setAdjustNote(e.target.value)}
+                />
+              </div>
+
+              <div className="inv-modal-actions">
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() => setSelectedProduct(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-confirm"
+                  disabled={isSubmittingAdjust || (selectedProduct.stock + (adjustMode === 'add' ? Number(adjustChange) : -Number(adjustChange))) < 0}
+                >
+                  {isSubmittingAdjust ? 'Updating Stock...' : 'Confirm Stock Adjustment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* History Modal */}
+      {historyProduct && (
+        <div className="inv-modal-overlay" onClick={() => setHistoryProduct(null)}>
+          <div className="inv-modal inv-modal-wide" onClick={e => e.stopPropagation()}>
+            <div className="inv-modal-header">
+              <div>
+                <h2>Inventory Transaction History</h2>
+                <p>{historyProduct.name} (SKU: {historyProduct.sku || 'N/A'}) • Current Stock: {historyProduct.stock}</p>
+              </div>
+              <button className="inv-modal-close" onClick={() => setHistoryProduct(null)}>✕</button>
+            </div>
+
+            <div className="inv-modal-body">
+              {loadingHistory ? (
+                <div className="inv-loading">
+                  <div className="inv-spinner"></div>
+                  <p>Loading history logs...</p>
+                </div>
+              ) : historyLogs.length === 0 ? (
+                <div className="inv-empty">
+                  <div className="inv-empty-icon">📜</div>
+                  <h3>No stock transactions recorded yet</h3>
+                  <p>Transactions will appear here when orders are placed, returns are processed, or manual stock adjustments occur.</p>
+                </div>
+              ) : (
+                <div className="inv-history-wrap">
+                  <table className="inv-history-table">
+                    <thead>
+                      <tr>
+                        <th>Date & Time</th>
+                        <th>Type</th>
+                        <th>Change</th>
+                        <th>Before ➔ After</th>
+                        <th>Reason / Note</th>
+                        <th>Changed By</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historyLogs.map(log => (
+                        <tr key={log._id}>
+                          <td><span className="inv-time">{formatDate(log.createdAt)}</span></td>
+                          <td>{getTransactionTypeBadge(log.type)}</td>
+                          <td>
+                            <span className={`inv-change-val ${log.quantity > 0 ? 'pos' : 'neg'}`}>
+                              {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="inv-stock-flow">
+                              {log.previousStock} ➔ <strong>{log.newStock}</strong>
+                            </span>
+                          </td>
+                          <td>
+                            <div className="inv-reason">{log.reason}</div>
+                            {log.note && <div className="inv-note">{log.note}</div>}
+                          </td>
+                          <td>
+                            <div className="inv-user-name">{log.changedBy?.name || 'System / Admin'}</div>
+                            <div className="inv-user-email">{log.changedBy?.email || ''}</div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

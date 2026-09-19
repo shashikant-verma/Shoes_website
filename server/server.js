@@ -12,6 +12,11 @@ const orderRoutes = require('./routes/orderRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const wishlistRoutes = require('./routes/wishlistRoutes');
 const addressRoutes = require('./routes/addressRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
+const couponRoutes = require('./routes/couponRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const returnRoutes = require('./routes/returnRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
 
 // Import middleware
 const errorMiddleware = require('./middleware/errorMiddleware');
@@ -50,6 +55,11 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/coupons', couponRoutes);
+app.use('/api/payment', paymentRoutes);
+app.use('/api/returns', returnRoutes);
+app.use('/api/admin/inventory', inventoryRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

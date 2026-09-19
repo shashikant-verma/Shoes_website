@@ -76,6 +76,18 @@ const authService = {
     }
   },
 
+  // Get JWT token from localStorage
+  getToken: () => {
+    const auth = localStorage.getItem('auth');
+    if (!auth) return null;
+    try {
+      const { token } = JSON.parse(auth);
+      return token || null;
+    } catch {
+      return null;
+    }
+  },
+
   // Store auth data in localStorage
   setAuth: (authData) => {
     localStorage.setItem('auth', JSON.stringify(authData));

@@ -194,6 +194,49 @@
   margin-left: 0.5rem;
 }
 
+/* Status Filter Tabs */
+.order-filter-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-tab-btn {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  padding: 0.45rem 1rem;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-tab-btn:hover {
+  border-color: #c9232d;
+  color: #c9232d;
+}
+
+.filter-tab-btn.active {
+  background: #c9232d;
+  color: #ffffff;
+  border-color: #c9232d;
+  box-shadow: 0 2px 8px rgba(201, 35, 45, 0.25);
+}
+
+.order-empty-filter {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  color: #6b7280;
+}
+
 /* Status Badges */
 .order-status-pill {
   display: inline-flex;
@@ -212,6 +255,12 @@
   align-items: center;
 }
 
+.status-confirmed {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
 .status-processing {
   background: #fffbeb;
   color: #b45309;
@@ -224,6 +273,12 @@
   border: 1px solid #bfdbfe;
 }
 
+.status-out-for-delivery {
+  background: #f5f3ff;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
+}
+
 .status-delivered {
   background: #ecfdf5;
   color: #047857;
@@ -234,6 +289,130 @@
   background: #fef2f2;
   color: #b91c1c;
   border: 1px solid #fecaca;
+}
+
+.btn-request-return {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #ffedd5;
+}
+
+.btn-request-return:hover {
+  background: #ffedd5;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+.btn-return-status {
+  background: #f5f3ff;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
+}
+
+.btn-return-status:hover {
+  background: #ede9fe;
+}
+
+.btn-order-details.danger {
+  color: #b91c1c;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.btn-order-details.danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+/* Return Form Controls */
+.return-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.return-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.return-select, .return-input, .return-textarea {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: #111827;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.return-select:focus, .return-input:focus, .return-textarea:focus {
+  border-color: #c9232d;
+  box-shadow: 0 0 0 3px rgba(201, 35, 45, 0.1);
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+/* Status History Section */
+.status-history-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.history-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.65rem 0.85rem;
+  background: #fafaf9;
+  border: 1px solid #f0eeeb;
+  border-radius: 8px;
+}
+
+.history-status-tag {
+  font-size: 10px;
+  font-weight: 800;
+  color: #c9232d;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.history-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.history-note {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.history-time {
+  font-size: 11px;
+  color: #9ca3af;
 }
 
 /* --------------------------------------------------------------------------

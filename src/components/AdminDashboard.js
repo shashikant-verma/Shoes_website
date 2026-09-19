@@ -6,6 +6,9 @@ import OrdersManager from './admin/OrdersManager';
 import CustomersManager from './admin/CustomersManager';
 import CategoriesManager from './admin/CategoriesManager';
 import InventoryManager from './admin/InventoryManager';
+import ReviewsManager from './admin/ReviewsManager';
+import CouponsManager from './admin/CouponsManager';
+import ReturnsManager from './admin/ReturnsManager';
 import Toast from './Toast';
 
 function AdminDashboard({ currentUser, onLogout }) {
@@ -38,12 +41,18 @@ function AdminDashboard({ currentUser, onLogout }) {
         return <ProductsManager />;
       case 'orders':
         return <OrdersManager />;
+      case 'returns':
+        return <ReturnsManager />;
       case 'customers':
         return <CustomersManager />;
       case 'categories':
         return <CategoriesManager />;
       case 'inventory':
         return <InventoryManager />;
+      case 'reviews':
+        return <ReviewsManager />;
+      case 'coupons':
+        return <CouponsManager />;
       case 'settings':
         return (
           <div style={{

@@ -84,9 +84,10 @@ const orderService = {
   },
 
   // Update order status (Admin only)
-  updateOrderStatus: async (id, status) => {
+  updateOrderStatus: async (id, statusData) => {
     try {
-      const response = await api.put(`/orders/${id}/status`, { status });
+      const payload = typeof statusData === 'string' ? { status: statusData } : statusData;
+      const response = await api.put(`/orders/${id}/status`, payload);
       return {
         success: true,
         data: response.data

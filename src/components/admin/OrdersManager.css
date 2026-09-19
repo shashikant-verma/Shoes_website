@@ -388,3 +388,144 @@
 .om-status-btn.status-shipped { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
 .om-status-btn.status-delivered { background: #dcfce7; color: #166534; border-color: #86efac; }
 .om-status-btn.status-cancelled { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+
+/* Badges & Tags */
+.om-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.om-paid-tag {
+  color: #166534;
+  background: #dcfce7;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 11px;
+}
+
+.om-code {
+  font-family: monospace;
+  font-size: 12px;
+  color: #6366f1;
+}
+
+/* Update Form Box */
+.om-update-box {
+  background: #fafaf9;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.om-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.om-form-group label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.om-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.om-input, .om-input-select, .om-textarea {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #111827;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.om-input:focus, .om-input-select:focus, .om-textarea:focus {
+  border-color: #c9232d;
+  box-shadow: 0 0 0 3px rgba(201, 35, 45, 0.1);
+}
+
+.om-save-btn {
+  width: 100%;
+  padding: 0.85rem;
+  background: #c9232d;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  margin-top: 0.5rem;
+}
+
+.om-save-btn:hover {
+  background: #a81c24;
+}
+
+.om-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* History Audit Log */
+.om-history-audit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.om-audit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.65rem 0.85rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.om-audit-status {
+  font-size: 10px;
+  font-weight: 800;
+  color: #c9232d;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.om-audit-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.om-audit-note {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.om-audit-meta {
+  font-size: 11px;
+  color: #6b7280;
+}

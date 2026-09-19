@@ -1,0 +1,313 @@
+/* Returns Manager Admin Styles */
+
+.rm-page {
+  padding: 2rem;
+  max-width: 1300px;
+  font-family: 'Inter', 'Manrope', sans-serif;
+}
+
+.rm-toast {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+.rm-toast-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.rm-toast-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+.rm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.75rem;
+}
+
+.rm-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #111;
+  margin: 0 0 0.25rem;
+  letter-spacing: -0.02em;
+}
+.rm-subtitle { color: #888; font-size: 14px; margin: 0; }
+
+.rm-refresh-btn {
+  padding: 0.6rem 1.25rem;
+  background: #c9232d;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.rm-refresh-btn:hover { background: #a61d26; }
+
+.rm-status-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  border-bottom: 2px solid #f0f0f0;
+}
+.rm-tab {
+  padding: 0.65rem 1.1rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  color: #666;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.rm-tab:hover { color: #333; }
+.rm-tab.active { color: #c9232d; border-bottom-color: #c9232d; }
+
+.rm-toolbar {
+  display: flex;
+  margin-bottom: 1.25rem;
+}
+.rm-search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #fff;
+  border: 1.5px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 0 1rem;
+}
+.rm-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 0.75rem 0;
+  font-size: 14px;
+}
+
+.rm-loading, .rm-error, .rm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 1rem;
+  background: #fff;
+  border: 1.5px solid #f0f0f0;
+  border-radius: 16px;
+  padding: 2.5rem;
+  text-align: center;
+}
+.rm-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f0f0f0;
+  border-top-color: #c9232d;
+  border-radius: 50%;
+  animation: rm-spin 0.8s linear infinite;
+}
+@keyframes rm-spin { to { transform: rotate(360deg); } }
+
+.rm-table-wrap {
+  background: #fff;
+  border: 1.5px solid #f0f0f0;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.rm-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.rm-table thead th {
+  padding: 1rem 1.25rem;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #888;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+}
+.rm-row {
+  border-bottom: 1px solid #f7f7f7;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.rm-row:hover { background: #fafafa; }
+.rm-row td { padding: 1rem 1.25rem; vertical-align: middle; }
+
+.rm-code { font-family: monospace; font-weight: 700; color: #333; }
+.rm-customer-name { font-weight: 600; font-size: 14px; color: #222; }
+.rm-customer-email { font-size: 12px; color: #888; }
+.rm-amount { font-weight: 800; color: #111; }
+
+.rm-status-pill {
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.rm-status-requested { background: #fff7ed; color: #c2410c; }
+.rm-status-approved { background: #eff6ff; color: #1d4ed8; }
+.rm-status-rejected { background: #fef2f2; color: #b91c1c; }
+.rm-status-received { background: #f0fdf4; color: #15803d; }
+.rm-status-pending { background: #fef9c3; color: #854d0e; }
+.rm-status-refunded { background: #ecfdf5; color: #047857; }
+.rm-status-cancelled { background: #f3f4f6; color: #6b7280; }
+
+.rm-refund-tag {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+}
+.rm-refund-tag.completed { background: #dcfce7; color: #166534; }
+.rm-refund-tag.failed { background: #fee2e2; color: #991b1b; }
+.rm-refund-tag.pending { background: #fef9c3; color: #854d0e; }
+
+.rm-view-btn {
+  padding: 0.4rem 0.9rem;
+  background: transparent;
+  border: 1.5px solid #e5e5e5;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.rm-view-btn:hover { border-color: #c9232d; color: #c9232d; }
+
+.rm-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.rm-page-btn {
+  padding: 0.6rem 1.25rem;
+  background: #fff;
+  border: 1.5px solid #e5e5e5;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rm-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Modal */
+.rm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(4px);
+}
+.rm-modal {
+  background: #fff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.rm-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.75rem 1.75rem 1rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+.rm-modal-header h2 { font-size: 1.25rem; font-weight: 800; margin: 0; }
+.rm-modal-header p { font-size: 13px; color: #888; margin: 0.25rem 0 0; }
+.rm-modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: #888; }
+
+.rm-modal-body { padding: 1.5rem 1.75rem; display: flex; flex-direction: column; gap: 1.5rem; }
+
+.rm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px dashed #e5e5e5;
+}
+.rm-section:last-child { border-bottom: none; }
+.rm-section h3 { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #888; margin: 0 0 0.5rem; }
+
+.rm-row-detail { display: flex; justify-content: space-between; font-size: 13.5px; color: #444; }
+.rm-row-detail span:last-child { font-weight: 700; color: #111; }
+.rm-highlight { color: #c9232d !important; }
+.rm-refund-price { color: #c9232d !important; font-size: 16px; }
+
+.rm-items-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.rm-item-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #fafafa;
+  border-radius: 8px;
+}
+.rm-item-name { font-weight: 700; font-size: 13.5px; color: #111; }
+.rm-item-meta { font-size: 11.5px; color: #777; }
+.rm-item-price { font-weight: 800; color: #111; }
+
+.rm-update-box { background: #fafaf9; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem; }
+.rm-status-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.rm-status-action-btn {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.rm-status-action-btn:hover { border-color: #c9232d; color: #c9232d; }
+.rm-status-action-btn.active { background: #c9232d; color: #fff; border-color: #c9232d; }
+
+.rm-form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.rm-form-group label { font-size: 12px; font-weight: 700; color: #374151; }
+.rm-input { padding: 0.65rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; }
+
+.rm-refund-trigger-box {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+}
+.rm-refund-trigger-box h4 { margin: 0 0 0.35rem; color: #166534; font-size: 14px; }
+.rm-refund-trigger-box p { margin: 0 0 0.75rem; font-size: 13px; color: #15803d; }
+.rm-trigger-refund-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: #166534;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.rm-trigger-refund-btn:hover { background: #14532d; }
+.rm-trigger-refund-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.rm-history-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.rm-history-item { display: flex; gap: 0.75rem; padding: 0.6rem; background: #fafafa; border-radius: 6px; }
+.rm-history-tag { font-size: 10px; font-weight: 800; color: #c9232d; background: #fee2e2; padding: 0.15rem 0.45rem; border-radius: 4px; height: fit-content; }
+.rm-history-note { font-size: 12.5px; font-weight: 600; color: #222; }
+.rm-history-meta { font-size: 11px; color: #888; }

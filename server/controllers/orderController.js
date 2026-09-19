@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const Coupon = require('../models/Coupon');
+const { evaluateCouponDiscount } = require('./couponController');
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -69,43 +71,94 @@ const createOrder = async (req, res, next) => {
       });
 
       // Update product stock
+      const prevStock = product.stock;
       product.stock -= item.quantity;
       await product.save();
+
+      try {
+        const InventoryTransaction = require('../models/InventoryTransaction');
+        await InventoryTransaction.create({
+          product: product._id,
+          sku: product.sku,
+          type: 'ORDER',
+          quantity: -item.quantity,
+          previousStock: prevStock,
+          newStock: product.stock,
+          reason: 'Customer Order',
+          referenceType: 'ORDER',
+          changedBy: req.user._id || req.user.id
+        });
+      } catch (invErr) {
+        console.warn('Inventory log notice:', invErr.message);
+      }
     }
 
-    // Calculate discount (if promo code is provided)
+    // Calculate discount via server-side Coupon validation engine
     let discount = 0;
-    if (promoCode) {
-      const validPromoCodes = {
-        'KINETIC10': 0.1,    // 10% off
-        'RUNNER15': 0.15,    // 15% off
-        'SPEED20': 0.20      // 20% off
-      };
+    let couponSnapshot = undefined;
+    let validCouponCode = undefined;
 
-      if (validPromoCodes[promoCode]) {
-        discount = subtotal * validPromoCodes[promoCode];
+    if (promoCode && typeof promoCode === 'string' && promoCode.trim().length > 0) {
+      const couponResult = await evaluateCouponDiscount({
+        code: promoCode,
+        cartItems: items,
+        userId: req.user.id || req.user._id
+      });
+
+      if (!couponResult.valid) {
+        return res.status(400).json({
+          success: false,
+          message: couponResult.message || 'Invalid or inapplicable coupon code'
+        });
       }
+
+      discount = couponResult.discountAmount;
+      validCouponCode = couponResult.code;
+      couponSnapshot = {
+        code: couponResult.code,
+        discountType: couponResult.discountType,
+        discountValue: couponResult.discountValue,
+        discountAmount: couponResult.discountAmount
+      };
     }
 
     // Calculate shipping (free over ₹15,000)
     const shipping = subtotal >= 15000 ? 0 : 150;
 
-    // Create order
+    // Create order with coupon snapshot and initial status history
+    const userId = req.user._id || req.user.id;
     const order = await Order.create({
-      user: req.user.id,
+      user: userId,
       items: validatedItems,
       subtotal,
       discount,
       shipping,
       shippingAddress,
-      promoCode,
-      notes
+      promoCode: validCouponCode,
+      coupon: couponSnapshot,
+      notes,
+      status: 'confirmed',
+      statusHistory: [{
+        status: 'confirmed',
+        note: 'Order created',
+        changedBy: userId,
+        changedAt: new Date()
+      }]
     });
+
+    // Increment coupon usage count upon successful order creation
+    if (validCouponCode) {
+      await Coupon.findOneAndUpdate(
+        { code: validCouponCode },
+        { $inc: { usageCount: 1 } }
+      );
+    }
 
     // Populate product details
     const populatedOrder = await Order.findById(order._id)
       .populate('user', 'name email')
-      .populate('items.product', 'name category');
+      .populate('items.product', 'name category')
+      .populate('statusHistory.changedBy', 'name email');
 
     res.status(201).json({
       success: true,
@@ -129,7 +182,8 @@ const getOrders = async (req, res, next) => {
     } = req.query;
 
     // Build query
-    const query = { user: req.user.id };
+    const userId = req.user._id || req.user.id;
+    const query = { user: userId };
 
     if (status) {
       query.status = status;
@@ -139,6 +193,7 @@ const getOrders = async (req, res, next) => {
     const orders = await Order.find(query)
       .populate('user', 'name email')
       .populate('items.product', 'name category')
+      .populate('statusHistory.changedBy', 'name email')
       .sort({ createdAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
@@ -186,6 +241,7 @@ const getAllOrders = async (req, res, next) => {
     const orders = await Order.find(query)
       .populate('user', 'name email')
       .populate('items.product', 'name category')
+      .populate('statusHistory.changedBy', 'name email')
       .sort({ createdAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
@@ -213,7 +269,8 @@ const getOrder = async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate('user', 'name email')
-      .populate('items.product', 'name category');
+      .populate('items.product', 'name category')
+      .populate('statusHistory.changedBy', 'name email');
 
     if (!order) {
       return res.status(404).json({
@@ -223,7 +280,10 @@ const getOrder = async (req, res, next) => {
     }
 
     // Check if user is authorized to view this order
-    if (req.user.role !== 'ADMIN' && order.user._id.toString() !== req.user.id) {
+    const userIdStr = (req.user._id || req.user.id).toString();
+    const orderUserIdStr = (order.user._id || order.user).toString();
+
+    if (req.user.role !== 'ADMIN' && orderUserIdStr !== userIdStr) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to view this order'
@@ -239,12 +299,23 @@ const getOrder = async (req, res, next) => {
   }
 };
 
+// Valid statuses & allowed transitions
+const VALID_STATUSES = ['confirmed', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'];
+const ALLOWED_TRANSITIONS = {
+  confirmed: ['processing', 'cancelled'],
+  processing: ['shipped', 'cancelled'],
+  shipped: ['out_for_delivery', 'delivered'],
+  out_for_delivery: ['delivered', 'cancelled'],
+  delivered: [],
+  cancelled: []
+};
+
 // @desc    Update order status
 // @route   PUT /api/orders/:id/status
 // @access  Private/Admin
 const updateOrderStatus = async (req, res, next) => {
   try {
-    const { status } = req.body;
+    const { status, note, trackingNumber, carrier, estimatedDeliveryDate } = req.body;
 
     const order = await Order.findById(req.params.id);
 
@@ -255,13 +326,68 @@ const updateOrderStatus = async (req, res, next) => {
       });
     }
 
-    order.status = status;
+    if (!status || typeof status !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Order status is required'
+      });
+    }
+
+    const targetStatus = status.toLowerCase();
+
+    if (!VALID_STATUSES.includes(targetStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid order status: ${status}`
+      });
+    }
+
+    // Check transition validity if status is changing
+    if (order.status !== targetStatus) {
+      const currentStatus = order.status || 'confirmed';
+      const allowed = ALLOWED_TRANSITIONS[currentStatus] || [];
+      if (!allowed.includes(targetStatus)) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot transition status from ${currentStatus} to ${targetStatus}`
+        });
+      }
+      order.status = targetStatus;
+    }
+
+    // Update optional tracking metadata
+    if (trackingNumber !== undefined) {
+      order.trackingNumber = trackingNumber;
+    }
+    if (carrier !== undefined) {
+      order.carrier = carrier;
+    }
+    if (estimatedDeliveryDate !== undefined) {
+      order.estimatedDeliveryDate = estimatedDeliveryDate ? new Date(estimatedDeliveryDate) : undefined;
+    }
+    if (targetStatus === 'shipped' && !order.shippedAt) {
+      order.shippedAt = new Date();
+    }
+
+    // Append status history entry with authenticated admin identity
+    const adminId = req.user._id || req.user.id;
+    order.statusHistory.push({
+      status: targetStatus,
+      note: note || `Status updated to ${targetStatus}`,
+      changedBy: adminId,
+      changedAt: new Date()
+    });
+
     const updatedOrder = await order.save();
+    const populatedOrder = await Order.findById(updatedOrder._id)
+      .populate('user', 'name email')
+      .populate('items.product', 'name category')
+      .populate('statusHistory.changedBy', 'name email');
 
     res.json({
       success: true,
       message: 'Order status updated successfully',
-      data: updatedOrder
+      data: populatedOrder
     });
   } catch (error) {
     next(error);

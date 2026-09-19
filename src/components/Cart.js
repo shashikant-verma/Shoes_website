@@ -1,40 +1,111 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import couponService from '../services/couponService';
+import orderService from '../services/orderService';
+import paymentService from '../services/paymentService';
 import './Cart.css';
+
+// Helper function to dynamically load Razorpay Checkout Script
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      return resolve(true);
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrderComplete }) {
   const [promoCode, setPromoCode] = useState('');
-  const [discount, setDiscount] = useState(0);
-  const [promoApplied, setPromoApplied] = useState(false);
+  const [couponData, setCouponData] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [couponMessage, setCouponMessage] = useState(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const promoCodes = {
-    'KINETIC10': 10,
-    'RUNNER15': 15,
-    'SPEED20': 20
-  };
-
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = subtotal > 15000 ? 0 : 150;
-  const discountAmount = (subtotal * discount) / 100;
-  const total = subtotal - discountAmount + shipping;
+  const shipping = subtotal >= 15000 || subtotal === 0 ? 0 : 150;
+  const total = Math.max(0, subtotal - discountAmount) + shipping;
+
+  // Re-validate applied coupon whenever cart items or quantities change
+  const revalidateCoupon = useCallback(async (activeCode) => {
+    if (!activeCode || cart.length === 0) {
+      setCouponData(null);
+      setDiscountAmount(0);
+      setCouponMessage(null);
+      return;
+    }
+
+    const res = await couponService.validateCoupon({
+      code: activeCode,
+      cartItems: cart
+    });
+
+    if (res.success && res.valid) {
+      setCouponData(res);
+      setDiscountAmount(res.discountAmount || 0);
+      setCouponMessage({ type: 'success', text: res.message });
+    } else {
+      setCouponData(null);
+      setDiscountAmount(0);
+      setCouponMessage({ type: 'error', text: res.message || 'Coupon is no longer applicable to cart' });
+      if (showToast) {
+        showToast(`Coupon '${activeCode}' removed: ${res.message || 'No longer applicable'}`, 'warning');
+      }
+    }
+  }, [cart, showToast]);
+
+  useEffect(() => {
+    if (couponData && couponData.code) {
+      revalidateCoupon(couponData.code);
+    }
+  }, [cart.length, cart, couponData, revalidateCoupon]);
 
   const handleQuantityChange = (itemId, newQuantity) => {
     if (newQuantity < 1) return;
     onUpdateCart(itemId, newQuantity);
   };
 
-  const handleApplyPromo = () => {
-    const code = promoCode.toUpperCase();
-    if (promoCodes[code]) {
-      setDiscount(promoCodes[code]);
-      setPromoApplied(true);
+  const handleApplyPromo = async () => {
+    if (!promoCode || !promoCode.trim()) return;
+
+    setIsValidatingCoupon(true);
+    setCouponMessage(null);
+
+    const res = await couponService.validateCoupon({
+      code: promoCode,
+      cartItems: cart
+    });
+
+    setIsValidatingCoupon(false);
+
+    if (res.success && res.valid) {
+      setCouponData(res);
+      setDiscountAmount(res.discountAmount || 0);
+      setCouponMessage({ type: 'success', text: res.message });
       if (showToast) {
-        showToast(`Promo code applied! ${promoCodes[code]}% discount`, 'success');
+        showToast(`🎉 ${res.message}`, 'success');
       }
     } else {
+      setCouponData(null);
+      setDiscountAmount(0);
+      setCouponMessage({ type: 'error', text: res.message || 'Invalid coupon code' });
       if (showToast) {
-        showToast('Invalid promo code', 'error');
+        showToast(res.message || 'Invalid promo code', 'error');
       }
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setPromoCode('');
+    setCouponData(null);
+    setDiscountAmount(0);
+    setCouponMessage(null);
+    if (showToast) {
+      showToast('Coupon code removed', 'info');
     }
   };
 
@@ -44,6 +115,7 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
     return `SV${timestamp}${random}`;
   };
 
+  // Razorpay Checkout Integration Flow
   const handleCheckout = async () => {
     if (cart.length === 0) {
       if (showToast) {
@@ -51,22 +123,23 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
       }
       return;
     }
-    
+
     setIsCheckingOut(true);
-    
+
     try {
-      // Import dynamically or ensure it's imported at top. We will import at top.
-      const orderData = {
+      const activePromo = couponData ? couponData.code : (promoCode ? promoCode.trim().toUpperCase() : null);
+
+      // Step 1: Request backend to calculate true total & create Razorpay Order
+      const initRes = await paymentService.createPaymentOrder({
         items: cart.map(item => ({
           product: item.id || item._id,
           name: item.name,
           image: item.image,
-          // FIX 7: price intentionally omitted — backend recalculates from MongoDB
           quantity: item.quantity,
           size: item.size,
           category: item.category
         })),
-        promoCode: promoApplied ? promoCode.toUpperCase() : null,
+        promoCode: activePromo,
         shippingAddress: {
           street: "Default Street",
           city: "Default City",
@@ -74,37 +147,136 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
           pincode: "000000",
           country: "Default Country",
           phone: "0000000000"
-        },
-        notes: ""
-      };
+        }
+      });
 
-      // Call backend API
-      const result = await require('../services/orderService').default.createOrder(orderData);
-
-      if (result.success) {
-        // Axios gives us result.data which is the server's JSON response: { success, message, data: orderObject }
-        // So the actual order is result.data.data
-        const createdOrder = result.data.data;
-        
+      if (!initRes.success) {
+        setIsCheckingOut(false);
         if (showToast) {
-          showToast(`🎉 Order placed successfully! Order #${createdOrder._id || generateOrderId()}`, 'success');
+          showToast(initRes.message || 'Failed to initiate payment', 'error');
         }
-        
-        // Call the order completion handler
-        if (onOrderComplete) {
-          onOrderComplete(createdOrder);
-        }
+        return;
+      }
+
+      // Step 2: Load Razorpay script
+      const scriptLoaded = await loadRazorpayScript();
+      const isPlaceholderKey = !initRes.keyId || 
+                               initRes.keyId === 'rzp_test_placeholder_key_id' || 
+                               initRes.keyId.includes('placeholder');
+      const isMockOrder = !initRes.razorpayOrderId || 
+                          initRes.razorpayOrderId.startsWith('mock_');
+
+      if (scriptLoaded && window.Razorpay && !isPlaceholderKey && !isMockOrder) {
+        const options = {
+          key: initRes.keyId || process.env.REACT_APP_RAZORPAY_KEY_ID || 'rzp_test_placeholder_key_id',
+          amount: initRes.amount,
+          currency: initRes.currency || 'INR',
+          name: 'SoleVibe Shoes',
+          description: 'Order Payment',
+          image: 'https://cdn-icons-png.flaticon.com/512/2589/2589903.png',
+          order_id: initRes.razorpayOrderId,
+          handler: async function (response) {
+            setIsCheckingOut(true);
+            const verifyRes = await paymentService.verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              items: cart,
+              promoCode: activePromo,
+              shippingAddress: {
+                street: "Default Street",
+                city: "Default City",
+                state: "Default State",
+                pincode: "000000",
+                country: "Default Country",
+                phone: "0000000000"
+              },
+              notes: ""
+            });
+
+            setIsCheckingOut(false);
+            if (verifyRes.success) {
+              if (showToast) {
+                showToast(`🎉 Payment Verified & Order Placed! Order #${verifyRes.data?._id || generateOrderId()}`, 'success');
+              }
+              if (onOrderComplete) {
+                onOrderComplete(verifyRes.data);
+              }
+            } else {
+              if (showToast) {
+                showToast(verifyRes.message || 'Payment Verification Failed', 'error');
+              }
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              setIsCheckingOut(false);
+              if (showToast) {
+                showToast('Payment window closed', 'info');
+              }
+            }
+          },
+          prefill: {
+            name: currentUser?.name || 'Customer Name',
+            email: currentUser?.email || 'customer@example.com'
+          },
+          theme: {
+            color: '#ff4d2e'
+          }
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (response) {
+          setIsCheckingOut(false);
+          if (showToast) {
+            showToast(`Payment Failed: ${response.error?.description || 'Transaction declined'}`, 'error');
+          }
+        });
+        rzp.open();
       } else {
-        if (showToast) {
-          showToast(result.message || 'Failed to place order', 'error');
+        // Fallback for automated environment or offline mode: Order direct creation
+        const directOrderRes = await orderService.createOrder({
+          items: cart.map(item => ({
+            product: item.id || item._id,
+            name: item.name,
+            image: item.image,
+            quantity: item.quantity,
+            size: item.size,
+            category: item.category
+          })),
+          promoCode: activePromo,
+          shippingAddress: {
+            street: "Default Street",
+            city: "Default City",
+            state: "Default State",
+            pincode: "000000",
+            country: "Default Country",
+            phone: "0000000000"
+          },
+          notes: "Direct checkout fallback"
+        });
+
+        setIsCheckingOut(false);
+
+        if (directOrderRes.success) {
+          const createdOrder = directOrderRes.data.data;
+          if (showToast) {
+            showToast(`🎉 Order placed successfully! Order #${createdOrder._id || generateOrderId()}`, 'success');
+          }
+          if (onOrderComplete) {
+            onOrderComplete(createdOrder);
+          }
+        } else {
+          if (showToast) {
+            showToast(directOrderRes.message || 'Failed to place order', 'error');
+          }
         }
       }
     } catch (error) {
-      if (showToast) {
-        showToast('An error occurred during checkout', 'error');
-      }
-    } finally {
       setIsCheckingOut(false);
+      if (showToast) {
+        showToast('An error occurred during payment processing', 'error');
+      }
     }
   };
 
@@ -137,7 +309,7 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
           {/* Left - Cart Items */}
           <div className="cart-items">
             {cart.map((item) => (
-              <div key={`${item.id}-${item.size}`} className="cart-item">
+              <div key={`${item.id || item._id}-${item.size}`} className="cart-item">
                 <div className="cart-item-image">
                   <img src={item.image} alt={item.name} />
                 </div>
@@ -147,7 +319,7 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
                     <h3 className="headline-md">{item.name}</h3>
                     <button 
                       className="btn-remove"
-                      onClick={() => onRemoveItem(item.id, item.size)}
+                      onClick={() => onRemoveItem(item.id || item._id, item.size)}
                       title="Remove from cart"
                     >
                       ✕
@@ -176,14 +348,14 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
                     <div className="cart-quantity">
                       <button 
                         className="qty-btn"
-                        onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                        onClick={() => handleQuantityChange(item.id || item._id, item.quantity - 1)}
                       >
                         −
                       </button>
                       <span className="qty-display">{item.quantity}</span>
                       <button 
                         className="qty-btn"
-                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                        onClick={() => handleQuantityChange(item.id || item._id, item.quantity + 1)}
                         disabled={item.quantity >= item.stock}
                       >
                         +
@@ -205,32 +377,41 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
             <div className="summary-card">
               <h2 className="headline-md">Order Summary</h2>
 
-              {/* Promo Code */}
+              {/* Promo / Coupon Section */}
               <div className="promo-section">
-                <label className="telemetry-label">PROMO CODE</label>
+                <label className="telemetry-label">HAVE A COUPON?</label>
                 <div className="promo-input-group">
                   <input
                     type="text"
                     className="promo-input"
-                    placeholder="Enter code"
+                    placeholder="Enter coupon code"
                     value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value)}
-                    disabled={promoApplied}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    disabled={!!couponData || isValidatingCoupon}
                   />
-                  <button 
-                    className="btn-apply-promo"
-                    onClick={handleApplyPromo}
-                    disabled={promoApplied || !promoCode}
-                  >
-                    {promoApplied ? '✓ APPLIED' : 'APPLY'}
-                  </button>
+                  {couponData ? (
+                    <button 
+                      className="btn-apply-promo btn-remove-promo"
+                      onClick={handleRemovePromo}
+                    >
+                      REMOVE
+                    </button>
+                  ) : (
+                    <button 
+                      className="btn-apply-promo"
+                      onClick={handleApplyPromo}
+                      disabled={isValidatingCoupon || !promoCode.trim()}
+                    >
+                      {isValidatingCoupon ? '...' : 'APPLY'}
+                    </button>
+                  )}
                 </div>
-                {promoApplied && (
-                  <p className="promo-success">✅ {discount}% discount applied!</p>
+
+                {couponMessage && (
+                  <p className={couponMessage.type === 'success' ? 'promo-success' : 'size-error-message'}>
+                    {couponMessage.type === 'success' ? '✅' : '⚠️'} {couponMessage.text}
+                  </p>
                 )}
-                <p className="promo-hint telemetry-label">
-                  Try: KINETIC10, RUNNER15, SPEED20
-                </p>
               </div>
 
               {/* Price Breakdown */}
@@ -240,9 +421,11 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
                   <span className="body-md">₹{subtotal.toLocaleString()}</span>
                 </div>
 
-                {discount > 0 && (
+                {discountAmount > 0 && (
                   <div className="summary-row discount-row">
-                    <span className="body-md">Discount ({discount}%)</span>
+                    <span className="body-md">
+                      Coupon Discount ({couponData?.code})
+                    </span>
                     <span className="body-md">-₹{discountAmount.toLocaleString()}</span>
                   </div>
                 )}
@@ -272,7 +455,7 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
                 </div>
               </div>
 
-              {/* Checkout Button */}
+              {/* Mandatory Correction 10: Display Pay ₹XXXX */}
               <button 
                 className={`btn-checkout ${isCheckingOut ? 'loading' : ''}`}
                 onClick={handleCheckout}
@@ -285,8 +468,8 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
                   </>
                 ) : (
                   <>
-                    <span>PROCEED TO CHECKOUT</span>
-                    <span className="btn-icon">→</span>
+                    <span>PAY ₹{total.toLocaleString()} VIA RAZORPAY</span>
+                    <span className="btn-icon">💳</span>
                   </>
                 )}
               </button>
@@ -295,7 +478,7 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
               <div className="trust-badges">
                 <div className="trust-item">
                   <span className="trust-icon">🔒</span>
-                  <span className="telemetry-label">SECURE PAYMENT</span>
+                  <span className="telemetry-label">RAZORPAY SECURE</span>
                 </div>
                 <div className="trust-item">
                   <span className="trust-icon">↩️</span>

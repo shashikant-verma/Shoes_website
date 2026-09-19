@@ -110,9 +110,12 @@ function AdminLayout({ children, currentUser, onLogout, activeSection = 'dashboa
     { id: 'dashboard', label: 'Dashboard', icon: AdminIcons.Dashboard },
     { id: 'products', label: 'Products', icon: AdminIcons.Products },
     { id: 'orders', label: 'Orders', icon: AdminIcons.Orders },
+    { id: 'returns', label: 'Returns & Refunds', icon: AdminIcons.Orders },
     { id: 'customers', label: 'Customers', icon: AdminIcons.Customers },
     { id: 'categories', label: 'Categories', icon: AdminIcons.Categories },
-    { id: 'inventory', label: 'Inventory', icon: AdminIcons.Inventory }
+    { id: 'inventory', label: 'Inventory', icon: AdminIcons.Inventory },
+    { id: 'reviews', label: 'Reviews', icon: AdminIcons.Categories },
+    { id: 'coupons', label: 'Coupons', icon: AdminIcons.Categories }
   ];
 
   const toggleSidebar = () => {

@@ -17,13 +17,40 @@ const orderSchema = new mongoose.Schema({
   shipping: { type: Number, default: 0, min: 0 },
   shippingAddress: { type: mongoose.Schema.Types.Mixed },
   promoCode: String,
+  coupon: {
+    code: String,
+    discountType: String,
+    discountValue: Number,
+    discountAmount: Number
+  },
   notes: String,
+  payment: {
+    provider: { type: String, default: 'RAZORPAY' },
+    razorpayOrderId: { type: String, sparse: true },
+    razorpayPaymentId: { type: String, sparse: true },
+    status: { type: String, enum: ['PENDING', 'CREATED', 'PAID', 'FAILED', 'CANCELLED'], default: 'PENDING' },
+    amount: { type: Number },
+    currency: { type: String, default: 'INR' },
+    paidAt: Date
+  },
   status: {
     type: String,
-    enum: ['processing', 'shipped', 'delivered', 'cancelled'],
-    default: 'processing'
-  }
+    enum: ['confirmed', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'],
+    default: 'confirmed'
+  },
+  statusHistory: [{
+    status: { type: String, required: true },
+    note: { type: String, default: '' },
+    changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    changedAt: { type: Date, default: Date.now }
+  }],
+  trackingNumber: { type: String, default: '' },
+  carrier: { type: String, default: '' },
+  shippedAt: Date,
+  estimatedDeliveryDate: Date
 }, { timestamps: true });
+
+orderSchema.index({ 'payment.razorpayPaymentId': 1 }, { unique: true, sparse: true });
 
 orderSchema.virtual('total').get(function() {
   return this.subtotal - this.discount + this.shipping;
