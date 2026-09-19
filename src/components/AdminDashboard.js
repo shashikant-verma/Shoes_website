@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import AdminLayout from './admin/AdminLayout';
 import Dashboard from './admin/Dashboard';
 import ProductsManager from './admin/ProductsManager';
+import OrdersManager from './admin/OrdersManager';
+import CustomersManager from './admin/CustomersManager';
+import CategoriesManager from './admin/CategoriesManager';
+import InventoryManager from './admin/InventoryManager';
 import Toast from './Toast';
 
 function AdminDashboard({ currentUser, onLogout }) {
@@ -13,7 +17,6 @@ function AdminDashboard({ currentUser, onLogout }) {
     window.AdminNavigationHandler = (sectionId) => {
       setActiveSection(sectionId);
     };
-    
     return () => {
       delete window.AdminNavigationHandler;
     };
@@ -34,43 +37,23 @@ function AdminDashboard({ currentUser, onLogout }) {
       case 'products':
         return <ProductsManager />;
       case 'orders':
-        return (
-          <div className="coming-soon">
-            <div className="coming-soon-icon">📋</div>
-            <h3>Orders Management</h3>
-            <p>Order management interface coming soon...</p>
-          </div>
-        );
+        return <OrdersManager />;
       case 'customers':
-        return (
-          <div className="coming-soon">
-            <div className="coming-soon-icon">👥</div>
-            <h3>Customer Management</h3>
-            <p>Customer management interface coming soon...</p>
-          </div>
-        );
+        return <CustomersManager />;
       case 'categories':
-        return (
-          <div className="coming-soon">
-            <div className="coming-soon-icon">🏷️</div>
-            <h3>Category Management</h3>
-            <p>Category management interface coming soon...</p>
-          </div>
-        );
+        return <CategoriesManager />;
       case 'inventory':
-        return (
-          <div className="coming-soon">
-            <div className="coming-soon-icon">📦</div>
-            <h3>Inventory Management</h3>
-            <p>Inventory management interface coming soon...</p>
-          </div>
-        );
+        return <InventoryManager />;
       case 'settings':
         return (
-          <div className="coming-soon">
-            <div className="coming-soon-icon">⚙️</div>
-            <h3>Settings</h3>
-            <p>Settings panel coming soon...</p>
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            minHeight: '400px', textAlign: 'center', background: 'white', borderRadius: '16px',
+            border: '1px solid #e5e5e5', padding: '48px 24px', margin: '2rem'
+          }}>
+            <div style={{ fontSize: '64px', marginBottom: '24px', opacity: 0.4 }}>⚙️</div>
+            <h3 style={{ fontSize: '24px', fontWeight: 700, color: '#333', margin: '0 0 12px' }}>Settings</h3>
+            <p style={{ fontSize: '16px', color: '#888', margin: 0 }}>Settings panel coming soon...</p>
           </div>
         );
       default:
@@ -88,47 +71,13 @@ function AdminDashboard({ currentUser, onLogout }) {
         {renderContent()}
       </AdminLayout>
 
-      <Toast 
+      <Toast
         message={toast.message}
         type={toast.type}
         isVisible={toast.show}
         onClose={hideToast}
         duration={4000}
       />
-
-      <style jsx>{`
-        .coming-soon {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          min-height: 400px;
-          text-align: center;
-          background: white;
-          border-radius: 16px;
-          border: 1px solid #e5e5e5;
-          padding: 48px 24px;
-        }
-        
-        .coming-soon-icon {
-          font-size: 64px;
-          margin-bottom: 24px;
-          opacity: 0.5;
-        }
-        
-        .coming-soon h3 {
-          font-size: 24px;
-          font-weight: 600;
-          color: #333;
-          margin: 0 0 12px 0;
-        }
-        
-        .coming-soon p {
-          font-size: 16px;
-          color: #666;
-          margin: 0;
-        }
-      `}</style>
     </>
   );
 }

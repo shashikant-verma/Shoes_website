@@ -199,7 +199,14 @@ function ProductFormModal({ product, onClose, onSave }) {
     
     setErrors(newErrors);
     setTabErrors(newTabErrors);
-    return Object.keys(newErrors).length === 0;
+
+    const tabOrder = ['basic', 'pricing', 'inventory', 'media', 'details'];
+    const firstErrorTab = tabOrder.find(tab => newTabErrors[tab]);
+
+    return {
+      isValid: Object.keys(newErrors).length === 0,
+      firstErrorTab
+    };
   };
 
   const isValidUrl = (string) => {
@@ -217,16 +224,13 @@ function ProductFormModal({ product, onClose, onSave }) {
     console.log('Form submission started'); // Debug log
     console.log('Form data:', formData); // Debug log
     
-    if (!validateForm()) {
+    const { isValid, firstErrorTab } = validateForm();
+    if (!isValid) {
       console.log('Form validation failed'); // Debug log
-      
-      // Auto-switch to first tab with errors
-      const firstErrorTab = Object.keys(tabErrors).find(tab => tabErrors[tab]);
       if (firstErrorTab) {
         setActiveTab(firstErrorTab);
         console.log('Switched to tab with errors:', firstErrorTab); // Debug log
       }
-      
       return;
     }
 

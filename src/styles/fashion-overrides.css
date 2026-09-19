@@ -724,23 +724,30 @@
   background: #fff;
 }
 
-.showcase-header,
-.collection-header {
+/* Showcase header (product showcase page – NOT the collection category page) */
+.showcase-header {
   border-bottom: 1px solid var(--fashion-line);
   background: var(--fashion-wash);
-}
-
-.showcase-header {
   padding: clamp(3rem, 6vw, 5rem) 0 2rem;
 }
 
-.collection-hero {
-  padding: clamp(3rem, 6vw, 5rem) 0 2rem;
+/* The collection-header now uses a full photographic hero — do NOT force wash/border here */
+.collection-header {
+  /* styles are in CollectionPage.css */
 }
 
-.telemetry-badge,
-.collection-hero .collection-title {
+.telemetry-badge {
   color: var(--fashion-red);
+}
+
+/* On the photographic hero the title must be white — CollectionPage.css sets color:#fff.
+   Only apply the dark ink override when we are NOT inside collection-header. */
+.showcase-header .section-title {
+  color: var(--fashion-ink);
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 5rem);
+  font-weight: 400;
+  line-height: 1;
 }
 
 .telemetry-label,
@@ -750,15 +757,6 @@
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.1em;
-}
-
-.showcase-header .section-title,
-.collection-title {
-  color: var(--fashion-ink);
-  font-family: var(--font-display);
-  font-size: clamp(2.5rem, 5vw, 5rem);
-  font-weight: 400;
-  line-height: 1;
 }
 
 .gradient-text {

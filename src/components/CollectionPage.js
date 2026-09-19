@@ -7,6 +7,7 @@ function CollectionPage({
   subtitle, 
   categoryFilter, 
   saleMode = false,
+  heroImage,
   onAddToCart, 
   onProductClick 
 }) {
@@ -16,6 +17,23 @@ function CollectionPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  // Hero background images with models and shoes in sharp focus
+  const categoryHeroImages = {
+    men: 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=1600&q=85', // Man tying athletic performance running shoe, shoes in sharp focus
+    women: 'https://images.unsplash.com/photo-1502904550040-7534597429ae?w=1600&q=85', // Woman runner with footwear in sharp focus
+    accessories: 'https://images.unsplash.com/photo-1582588678413-dbf45f4823e9?w=1600&q=85', // Footwear accessories, care, and essentials
+    ozark: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=1600&q=85', // Rugged outdoor trail & hiking shoes in focus
+    running: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=1600&q=85',
+    training: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1600&q=85',
+    trail: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1600&q=85',
+    racing: 'https://images.unsplash.com/photo-1516478177764-9fe5bd7e9717?w=1600&q=85',
+    'new-arrivals': 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=1600&q=85',
+    sale: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=1600&q=85',
+    all: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1600&q=85'
+  };
+
+  const currentHeroImage = heroImage || categoryHeroImages[categoryFilter] || categoryHeroImages[title?.toLowerCase()] || categoryHeroImages.men;
+
   // Filter and sort states
   const [selectedSubcategory, setSelectedSubcategory] = useState(initialSubcategory);
   const [sortBy, setSortBy] = useState('featured');
@@ -28,15 +46,37 @@ function CollectionPage({
     color: []
   });
 
-  // Subcategories for navigation
-  const subcategories = [
-    { id: 'all', name: 'ALL' },
-    { id: 'running', name: 'RUNNING' },
-    { id: 'road-racing', name: 'ROAD RACING' },
-    { id: 'trail', name: 'TRAIL' },
-    { id: 'training', name: 'TRAINING' },
-    { id: 'lifestyle', name: 'LIFESTYLE' }
-  ];
+  // Dynamic subcategories for navigation
+  const getSubcategories = () => {
+    if (categoryFilter === 'accessories') {
+      return [
+        { id: 'all', name: 'ALL' },
+        { id: 'socks', name: 'SOCKS' },
+        { id: 'insoles', name: 'INSOLES' },
+        { id: 'care', name: 'SHOE CARE' },
+        { id: 'laces', name: 'LACES' }
+      ];
+    }
+    if (categoryFilter === 'ozark') {
+      return [
+        { id: 'all', name: 'ALL' },
+        { id: 'trail', name: 'TRAIL RUNNING' },
+        { id: 'hiking', name: 'HIKING & TREK' },
+        { id: 'all-weather', name: 'ALL WEATHER' },
+        { id: 'rugged', name: 'RUGGED BOOTS' }
+      ];
+    }
+    return [
+      { id: 'all', name: 'ALL' },
+      { id: 'running', name: 'RUNNING' },
+      { id: 'road-racing', name: 'ROAD RACING' },
+      { id: 'trail', name: 'TRAIL' },
+      { id: 'training', name: 'TRAINING' },
+      { id: 'lifestyle', name: 'LIFESTYLE' }
+    ];
+  };
+
+  const subcategories = getSubcategories();
 
   const sortOptions = [
     { value: 'featured', label: 'Featured' },
@@ -55,12 +95,21 @@ function CollectionPage({
   const loadProducts = async () => {
     setLoading(true);
     try {
-      const apiCategory = ['men', 'women', 'unisex'].includes(categoryFilter) ? categoryFilter : undefined;
-      const result = await productService.getProducts({
+      const isGender = ['men', 'women', 'unisex'].includes(categoryFilter);
+      const isSpecialCollection = ['accessories', 'ozark'].includes(categoryFilter);
+
+      const params = {
         status: 'active',
-        category: apiCategory,
         limit: 50
-      });
+      };
+
+      if (isGender) {
+        params.category = categoryFilter;
+      } else if (isSpecialCollection) {
+        params.collectionName = categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1);
+      }
+
+      const result = await productService.getProducts(params);
       
       if (result.success) {
         const transformedProducts = result.data.data.map(product => ({
@@ -132,6 +181,20 @@ function CollectionPage({
           case 'lifestyle':
             return productName.includes('lifestyle') || productDesc.includes('lifestyle') ||
                    productName.includes('casual') || productDesc.includes('casual');
+          case 'socks':
+            return productName.includes('sock') || productDesc.includes('sock');
+          case 'insoles':
+            return productName.includes('insole') || productDesc.includes('insole');
+          case 'care':
+            return productName.includes('care') || productName.includes('clean') || productDesc.includes('care');
+          case 'laces':
+            return productName.includes('lace') || productDesc.includes('lace');
+          case 'hiking':
+            return productName.includes('hike') || productDesc.includes('hike') || productName.includes('boot');
+          case 'all-weather':
+            return productName.includes('shield') || productDesc.includes('water') || productDesc.includes('weather');
+          case 'rugged':
+            return productName.includes('boot') || productDesc.includes('rugged') || productDesc.includes('durable');
           default:
             return true;
         }
@@ -238,10 +301,21 @@ function CollectionPage({
   }
   return (
     <div className="collection-page">
-      {/* Collection Header */}
-      <div className="collection-header">
-        <div className="collection-container">
+      {/* Collection Header with Photographic Background */}
+      <div className={`collection-header ${currentHeroImage ? 'has-hero-bg' : ''}`}>
+        {currentHeroImage && (
+          <div className="collection-hero-bg-layer">
+            <img 
+              src={currentHeroImage} 
+              alt={`${title} Footwear Focus`} 
+              className="collection-hero-bg-img" 
+            />
+            <div className="collection-hero-overlay"></div>
+          </div>
+        )}
+        <div className="collection-container relative-z">
           <div className="collection-hero">
+            <span className="collection-badge-tag">SOLEVIBE EDIT</span>
             <h1 className="collection-title">{title}</h1>
             <p className="collection-subtitle">{subtitle}</p>
           </div>

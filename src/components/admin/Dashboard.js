@@ -268,6 +268,7 @@ function Dashboard() {
         <div className="dashboard-card sales-overview">
           <div className="card-header">
             <h3 className="card-title">Sales Overview</h3>
+            {stats.orders > 0 && <span className="card-badge">{stats.orders} orders</span>}
           </div>
           <div className="card-content">
             {stats.orders > 0 ? (
@@ -278,20 +279,18 @@ function Dashboard() {
                   </div>
                   <div className="metric-info">
                     <div className="metric-value">{formatCurrency(stats.revenue)}</div>
-                    <div className="metric-label">Revenue</div>
+                    <div className="metric-label">Total Revenue</div>
                   </div>
                 </div>
-                
                 <div className="sales-metric">
                   <div className="metric-icon">
                     <DashboardIcons.Orders />
                   </div>
                   <div className="metric-info">
                     <div className="metric-value">{stats.orders}</div>
-                    <div className="metric-label">Orders</div>
+                    <div className="metric-label">Total Orders</div>
                   </div>
                 </div>
-                
                 <div className="sales-metric">
                   <div className="metric-icon">
                     <DashboardIcons.TrendUp />
@@ -301,12 +300,40 @@ function Dashboard() {
                     <div className="metric-label">Avg. Order Value</div>
                   </div>
                 </div>
+                <div className="sales-metric">
+                  <div className="metric-icon">
+                    <DashboardIcons.Customers />
+                  </div>
+                  <div className="metric-info">
+                    <div className="metric-value">{stats.customers}</div>
+                    <div className="metric-label">Customers Served</div>
+                  </div>
+                </div>
               </div>
             ) : (
-              <div className="empty-state">
-                <DashboardIcons.EmptyBox />
-                <h4>No sales data yet</h4>
-                <p>Sales analytics will appear here once you start receiving orders.</p>
+              <div className="sales-placeholder">
+                <div className="placeholder-icon">📊</div>
+                <h4>No orders yet</h4>
+                <p>Sales analytics will appear once your first order comes in.</p>
+                <div className="store-health">
+                  <div className="health-title">Store Health</div>
+                  <div className="health-metrics">
+                    <div className="health-metric">
+                      <span className="hm-value">{stats.activeProducts}</span>
+                      <span className="hm-label">Live Products</span>
+                    </div>
+                    <div className="health-divider"></div>
+                    <div className="health-metric">
+                      <span className={`hm-value ${stats.lowStock > 0 ? 'hm-warn' : 'hm-good'}`}>{stats.lowStock}</span>
+                      <span className="hm-label">Low Stock</span>
+                    </div>
+                    <div className="health-divider"></div>
+                    <div className="health-metric">
+                      <span className="hm-value hm-good">{stats.activeProducts > 0 ? '✓' : '—'}</span>
+                      <span className="hm-label">Store Ready</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
