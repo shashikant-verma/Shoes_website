@@ -45,11 +45,11 @@ const productSchema = new mongoose.Schema({
   rating: { type: Number, default: 0, min: 0, max: 5 },
   reviewCount: { type: Number, default: 0, min: 0 },
   status: { type: String, enum: ['active', 'inactive', 'discontinued'], default: 'active' }
-}, { timestamps: true });
+}, { timestamps: true, suppressReservedKeysWarning: true });
 
 // Auto-generate slug before saving
-productSchema.pre('save', async function(next) {
-  if (this.isModified('name') || this.isNew) {
+productSchema.pre('save', async function() {
+  if (this.isModified('name') || this.$isNew) {
     let baseSlug = generateSlug(this.name);
     let slug = baseSlug;
     let counter = 1;
@@ -62,17 +62,15 @@ productSchema.pre('save', async function(next) {
     
     this.slug = slug;
   }
-  next();
 });
 
 // Auto-generate SKU if not provided
-productSchema.pre('save', async function(next) {
-  if (!this.sku && this.isNew) {
+productSchema.pre('save', async function() {
+  if (!this.sku && this.$isNew) {
     const prefix = this.category === 'men' ? 'SV-M' : this.category === 'women' ? 'SV-W' : 'SV-U';
     const count = await this.constructor.countDocuments();
     this.sku = `${prefix}-${(count + 1).toString().padStart(3, '0')}`;
   }
-  next();
 });
 
 module.exports = mongoose.model('Product', productSchema);

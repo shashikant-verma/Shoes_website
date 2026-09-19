@@ -35,8 +35,8 @@ function ProductFormModal({ product, onClose, onSave }) {
     description: '',
     image: '',
     images: [''],
-    sizes: [''],
-    colors: [''],
+    sizes: ['7', '8', '9', '10', '11'], // Sensible shoe defaults
+    colors: ['Black', 'White'], // Sensible color defaults
     specifications: {
       weight: '',
       drop: '',
@@ -60,6 +60,7 @@ function ProductFormModal({ product, onClose, onSave }) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [activeTab, setActiveTab] = useState('basic');
+  const [tabErrors, setTabErrors] = useState({});  // Track errors per tab
 
   useEffect(() => {
     if (product) {
@@ -137,50 +138,67 @@ function ProductFormModal({ product, onClose, onSave }) {
 
   const validateForm = () => {
     const newErrors = {};
+    const newTabErrors = { basic: false, pricing: false, inventory: false, media: false, details: false };
 
+    // Basic Info tab validation
     if (!formData.name.trim()) {
       newErrors.name = 'Product name is required';
-    }
-
-    if (!formData.price || formData.price <= 0) {
-      newErrors.price = 'Valid price is required';
+      newTabErrors.basic = true;
     }
 
     if (!formData.description.trim()) {
       newErrors.description = 'Description is required';
+      newTabErrors.basic = true;
     }
 
-    if (!formData.image.trim()) {
-      newErrors.image = 'Product image is required';
-    } else if (!isValidUrl(formData.image)) {
-      newErrors.image = 'Please enter a valid image URL';
+    // Pricing tab validation
+    if (!formData.price || formData.price <= 0) {
+      newErrors.price = 'Valid price is required';
+      newTabErrors.pricing = true;
     }
 
+    // Inventory tab validation
     if (formData.stock < 0) {
       newErrors.stock = 'Stock cannot be negative';
+      newTabErrors.inventory = true;
     }
-
-    // Validate additional images
-    formData.images.forEach((img, index) => {
-      if (img.trim() && !isValidUrl(img)) {
-        newErrors[`image_${index}`] = `Image ${index + 1} URL is invalid`;
-      }
-    });
 
     // Validate that at least one size is provided
     const validSizes = formData.sizes.filter(size => size.trim());
     if (validSizes.length === 0) {
       newErrors.sizes = 'At least one size is required';
+      newTabErrors.inventory = true;
     }
 
     // Validate that at least one color is provided
     const validColors = formData.colors.filter(color => color.trim());
     if (validColors.length === 0) {
       newErrors.colors = 'At least one color is required';
+      newTabErrors.inventory = true;
     }
 
+    // Media tab validation
+    if (!formData.image.trim()) {
+      newErrors.image = 'Product image is required';
+      newTabErrors.media = true;
+    } else if (!isValidUrl(formData.image)) {
+      newErrors.image = 'Please enter a valid image URL';
+      newTabErrors.media = true;
+    }
+
+    // Validate additional images
+    formData.images.forEach((img, index) => {
+      if (img.trim() && !isValidUrl(img)) {
+        newErrors[`image_${index}`] = `Image ${index + 1} URL is invalid`;
+        newTabErrors.media = true;
+      }
+    });
+
     console.log('Form validation errors:', newErrors); // Debug log
+    console.log('Tab errors:', newTabErrors); // Debug log
+    
     setErrors(newErrors);
+    setTabErrors(newTabErrors);
     return Object.keys(newErrors).length === 0;
   };
 
@@ -201,6 +219,14 @@ function ProductFormModal({ product, onClose, onSave }) {
     
     if (!validateForm()) {
       console.log('Form validation failed'); // Debug log
+      
+      // Auto-switch to first tab with errors
+      const firstErrorTab = Object.keys(tabErrors).find(tab => tabErrors[tab]);
+      if (firstErrorTab) {
+        setActiveTab(firstErrorTab);
+        console.log('Switched to tab with errors:', firstErrorTab); // Debug log
+      }
+      
       return;
     }
 
@@ -278,6 +304,59 @@ function ProductFormModal({ product, onClose, onSave }) {
     }
   };
 
+  const fillSampleProduct = () => {
+    setFormData({
+      name: 'Nike Air Max 270',
+      brand: 'Nike',
+      sku: '',
+      category: 'men',
+      gender: 'men',
+      productType: 'Running Shoes',
+      collectionName: 'Air Max',
+      price: '12999',
+      originalPrice: '15999',
+      discount: 20,
+      description: 'Experience ultimate comfort with the Nike Air Max 270. Featuring Nike\'s largest heel Air unit yet and a sleek design perfect for everyday wear and athletic performance.',
+      image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&h=600&fit=crop&crop=center',
+      images: [
+        'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&h=600&fit=crop&crop=center',
+        'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&h=600&fit=crop&crop=center'
+      ],
+      sizes: ['7', '8', '9', '10', '11', '12'],
+      colors: ['Black', 'White', 'Blue', 'Red'],
+      specifications: {
+        weight: '270g',
+        drop: '10mm',
+        energy: '85%',
+        material: 'Mesh Upper',
+        sole: 'Air Max',
+        closure: 'Lace-up',
+        type: 'Running',
+        use: 'Everyday, Training'
+      },
+      features: [
+        'Air Max cushioning technology',
+        'Breathable mesh upper',
+        'Lightweight construction',
+        'Durable rubber outsole'
+      ],
+      badge: 'POPULAR',
+      badgeColor: 'primary',
+      stock: 50,
+      featured: true,
+      isNew: true,
+      onSale: true,
+      status: 'active'
+    });
+    
+    // Switch to basic tab to show filled data
+    setActiveTab('basic');
+    
+    // Clear any existing errors
+    setErrors({});
+    setTabErrors({});
+  };
+
   const tabs = [
     { id: 'basic', label: 'Basic Info' },
     { id: 'pricing', label: 'Pricing' },
@@ -302,15 +381,47 @@ function ProductFormModal({ product, onClose, onSave }) {
           {tabs.map(tab => (
             <button
               key={tab.id}
-              className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
+              className={`tab-button ${activeTab === tab.id ? 'active' : ''} ${tabErrors[tab.id] ? 'has-error' : ''}`}
               onClick={() => setActiveTab(tab.id)}
             >
               {tab.label}
+              {tabErrors[tab.id] && <span className="error-indicator">●</span>}
             </button>
           ))}
+          
+          {/* Fill Sample Button */}
+          {!product && (
+            <button
+              type="button"
+              onClick={fillSampleProduct}
+              className="btn-fill-sample"
+              title="Fill form with sample product data"
+            >
+              <FormIcons.Add />
+              Fill Sample
+            </button>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="product-form">
+          {/* Validation Error Summary */}
+          {Object.keys(errors).length > 0 && (
+            <div className="validation-error-banner">
+              <div className="error-icon">⚠️</div>
+              <div className="error-content">
+                <strong>Please fix the following issues:</strong>
+                <ul className="error-list">
+                  {Object.entries(errors).map(([field, message]) => (
+                    field !== 'submit' && (
+                      <li key={field}>{message}</li>
+                    )
+                  ))}
+                </ul>
+                <small>Click the tabs with red dots (●) to fix required fields.</small>
+              </div>
+            </div>
+          )}
+
           <div className="modal-content">
             {/* Basic Information Tab */}
             {activeTab === 'basic' && (
