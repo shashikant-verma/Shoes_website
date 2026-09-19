@@ -54,15 +54,11 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
     
     setIsCheckingOut(true);
     
-    // Simulate checkout processing
-    setTimeout(() => {
-      // Create order object
-      const newOrder = {
-        id: generateOrderId(),
-        createdAt: new Date().toISOString(),
-        status: 'processing',
+    try {
+      // Import dynamically or ensure it's imported at top. We will import at top.
+      const orderData = {
         items: cart.map(item => ({
-          id: item.id,
+          product: item.id || item._id,
           name: item.name,
           image: item.image,
           price: item.price,
@@ -70,31 +66,46 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
           size: item.size,
           category: item.category
         })),
-        subtotal: subtotal,
-        discount: discountAmount,
-        shipping: shipping,
-        total: total,
         promoCode: promoApplied ? promoCode.toUpperCase() : null,
-        user: {
-          id: currentUser.id,
-          name: currentUser.name,
-          email: currentUser.email
-        }
+        shippingAddress: {
+          street: "Default Street",
+          city: "Default City",
+          state: "Default State",
+          pincode: "000000",
+          country: "Default Country",
+          phone: "0000000000"
+        },
+        notes: ""
       };
 
-      setIsCheckingOut(false);
-      
-      // Show success message
+      // Call backend API
+      const result = await require('../services/orderService').default.createOrder(orderData);
+
+      if (result.success) {
+        // Axios gives us result.data which is the server's JSON response: { success, message, data: orderObject }
+        // So the actual order is result.data.data
+        const createdOrder = result.data.data;
+        
+        if (showToast) {
+          showToast(`🎉 Order placed successfully! Order #${createdOrder._id || generateOrderId()}`, 'success');
+        }
+        
+        // Call the order completion handler
+        if (onOrderComplete) {
+          onOrderComplete(createdOrder);
+        }
+      } else {
+        if (showToast) {
+          showToast(result.message || 'Failed to place order', 'error');
+        }
+      }
+    } catch (error) {
       if (showToast) {
-        showToast(`🎉 Order placed successfully! Order #${newOrder.id}`, 'success');
+        showToast('An error occurred during checkout', 'error');
       }
-      
-      // Call the order completion handler
-      if (onOrderComplete) {
-        onOrderComplete(newOrder);
-      }
-      
-    }, 1500);
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
 
   if (cart.length === 0) {
