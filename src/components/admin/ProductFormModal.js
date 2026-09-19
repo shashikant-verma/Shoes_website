@@ -160,6 +160,25 @@ function ProductFormModal({ product, onClose, onSave }) {
       newErrors.stock = 'Stock cannot be negative';
     }
 
+    // Validate additional images
+    formData.images.forEach((img, index) => {
+      if (img.trim() && !isValidUrl(img)) {
+        newErrors[`image_${index}`] = `Image ${index + 1} URL is invalid`;
+      }
+    });
+
+    // Validate that at least one size is provided
+    const validSizes = formData.sizes.filter(size => size.trim());
+    if (validSizes.length === 0) {
+      newErrors.sizes = 'At least one size is required';
+    }
+
+    // Validate that at least one color is provided
+    const validColors = formData.colors.filter(color => color.trim());
+    if (validColors.length === 0) {
+      newErrors.colors = 'At least one color is required';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -196,6 +215,13 @@ function ProductFormModal({ product, onClose, onSave }) {
         colors: formData.colors.filter(color => color.trim() !== '')
       };
 
+      // Remove empty values
+      Object.keys(cleanedData).forEach(key => {
+        if (cleanedData[key] === '' || cleanedData[key] === null) {
+          delete cleanedData[key];
+        }
+      });
+
       let result;
       if (product) {
         result = await productService.updateProduct(product._id, cleanedData);
@@ -204,13 +230,36 @@ function ProductFormModal({ product, onClose, onSave }) {
       }
 
       if (result.success) {
-        onSave();
+        onSave(!!product, formData.name); // Pass isEdit flag and product name
       } else {
-        setErrors({ submit: result.message });
+        // Handle specific error cases
+        if (result.message.includes('already exists')) {
+          if (result.message.includes('sku')) {
+            setErrors({ sku: 'This SKU already exists' });
+          } else if (result.message.includes('name')) {
+            setErrors({ name: 'A product with this name already exists' });
+          } else {
+            setErrors({ submit: result.message });
+          }
+        } else if (result.errors) {
+          // Handle validation errors
+          const errorObj = {};
+          result.errors.forEach(error => {
+            if (error.includes('name')) errorObj.name = error;
+            else if (error.includes('price')) errorObj.price = error;
+            else if (error.includes('description')) errorObj.description = error;
+            else if (error.includes('image')) errorObj.image = error;
+            else if (error.includes('stock')) errorObj.stock = error;
+            else errorObj.submit = error;
+          });
+          setErrors(errorObj);
+        } else {
+          setErrors({ submit: result.message });
+        }
       }
     } catch (error) {
       console.error('Error saving product:', error);
-      setErrors({ submit: 'Failed to save product. Please try again.' });
+      setErrors({ submit: 'Failed to save product. Please check your connection and try again.' });
     } finally {
       setLoading(false);
     }
@@ -477,7 +526,9 @@ function ProductFormModal({ product, onClose, onSave }) {
 
                 {/* Sizes */}
                 <div className="form-group">
-                  <label className="form-label">Available Sizes</label>
+                  <label className="form-label">
+                    Available Sizes <span className="required">*</span>
+                  </label>
                   <div className="array-inputs">
                     {formData.sizes.map((size, index) => (
                       <div key={index} className="array-input-row">
@@ -508,11 +559,14 @@ function ProductFormModal({ product, onClose, onSave }) {
                       Add Size
                     </button>
                   </div>
+                  {errors.sizes && <span className="error-message">{errors.sizes}</span>}
                 </div>
 
                 {/* Colors */}
                 <div className="form-group">
-                  <label className="form-label">Available Colors</label>
+                  <label className="form-label">
+                    Available Colors <span className="required">*</span>
+                  </label>
                   <div className="array-inputs">
                     {formData.colors.map((color, index) => (
                       <div key={index} className="array-input-row">
@@ -543,6 +597,7 @@ function ProductFormModal({ product, onClose, onSave }) {
                       Add Color
                     </button>
                   </div>
+                  {errors.colors && <span className="error-message">{errors.colors}</span>}
                 </div>
 
                 <div className="checkbox-group">
@@ -764,11 +819,16 @@ function ProductFormModal({ product, onClose, onSave }) {
             )}
           </div>
 
-          {errors.submit && (
-            <div className="form-error">
-              {errors.submit}
-            </div>
-          )}
+            {errors.submit && (
+              <div className="form-error">
+                <div className="error-icon">⚠️</div>
+                <div className="error-content">
+                  <strong>Error:</strong> {errors.submit}
+                  <br />
+                  <small>Please check your input and try again. If the problem persists, contact support.</small>
+                </div>
+              </div>
+            )}
 
           <div className="modal-footer">
             <button

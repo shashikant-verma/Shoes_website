@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './ProductsManager.css';
 import ProductFormModal from './ProductFormModal';
 import ConfirmationModal from './ConfirmationModal';
+import Toast from '../Toast';
 import productService from '../../services/productService';
 
 // Product Management Icons
@@ -76,6 +77,17 @@ function ProductsManager() {
   
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
+
+  // Toast state
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+  };
+
+  const hideToast = () => {
+    setToast(prev => ({ ...prev, show: false }));
+  };
 
   useEffect(() => {
     loadProducts();
@@ -217,19 +229,23 @@ function ProductsManager() {
         await loadProducts();
         setShowConfirmation(false);
         setProductToDelete(null);
+        showToast(`Product "${productToDelete.name}" deleted successfully`, 'success');
       } else {
-        alert(`Failed to delete product: ${result.message}`);
+        showToast(`Failed to delete product: ${result.message}`, 'error');
       }
     } catch (error) {
       console.error('Error deleting product:', error);
-      alert('Failed to delete product. Please try again.');
+      showToast('Failed to delete product. Please try again.', 'error');
     }
   };
 
-  const handleProductSaved = async () => {
+  const handleProductSaved = async (isEdit = false, productName = '') => {
     await loadProducts();
     setShowProductForm(false);
     setSelectedProduct(null);
+    
+    const action = isEdit ? 'updated' : 'created';
+    showToast(`Product "${productName}" ${action} successfully!`, 'success');
   };
 
   const getStatusBadge = (status) => {
@@ -518,6 +534,15 @@ function ProductsManager() {
           type="danger"
         />
       )}
+
+      {/* Toast Notifications */}
+      <Toast 
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.show}
+        onClose={hideToast}
+        duration={4000}
+      />
     </div>
   );
 }

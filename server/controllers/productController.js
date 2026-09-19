@@ -118,7 +118,10 @@ const getProduct = async (req, res, next) => {
 // @access  Private/Admin
 const createProduct = async (req, res, next) => {
   try {
-    const product = await Product.create(req.body);
+    // Remove slug from request body as it will be auto-generated
+    const { slug, ...productData } = req.body;
+    
+    const product = await Product.create(productData);
 
     res.status(201).json({
       success: true,
@@ -126,6 +129,25 @@ const createProduct = async (req, res, next) => {
       data: product
     });
   } catch (error) {
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation Error',
+        errors: messages
+      });
+    }
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0];
+      return res.status(400).json({
+        success: false,
+        message: `${field} already exists`
+      });
+    }
+    
     next(error);
   }
 };
@@ -135,9 +157,12 @@ const createProduct = async (req, res, next) => {
 // @access  Private/Admin
 const updateProduct = async (req, res, next) => {
   try {
+    // Remove slug from request body as it will be auto-generated if name changes
+    const { slug, ...productData } = req.body;
+    
     const product = await Product.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      productData,
       {
         new: true,
         runValidators: true
@@ -157,6 +182,25 @@ const updateProduct = async (req, res, next) => {
       data: product
     });
   } catch (error) {
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation Error',
+        errors: messages
+      });
+    }
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0];
+      return res.status(400).json({
+        success: false,
+        message: `${field} already exists`
+      });
+    }
+    
     next(error);
   }
 };

@@ -1,8 +1,16 @@
 const mongoose = require('mongoose');
 
+// Helper function to generate slug
+const generateSlug = (name) => {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+};
+
 const productSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
-  slug: { type: String, required: true, unique: true, trim: true },
+  slug: { type: String, unique: true, trim: true },
   sku: { type: String, unique: true, sparse: true, trim: true },
   brand: { type: String, default: 'SoleVibe', trim: true },
   category: { type: String, enum: ['men', 'women', 'unisex'], required: true },
@@ -36,7 +44,35 @@ const productSchema = new mongoose.Schema({
   onSale: { type: Boolean, default: false },
   rating: { type: Number, default: 0, min: 0, max: 5 },
   reviewCount: { type: Number, default: 0, min: 0 },
-  status: { type: String, enum: ['active', 'inactive'], default: 'active' }
+  status: { type: String, enum: ['active', 'inactive', 'discontinued'], default: 'active' }
 }, { timestamps: true });
+
+// Auto-generate slug before saving
+productSchema.pre('save', async function(next) {
+  if (this.isModified('name') || this.isNew) {
+    let baseSlug = generateSlug(this.name);
+    let slug = baseSlug;
+    let counter = 1;
+
+    // Check if slug exists and generate unique one
+    while (await this.constructor.findOne({ slug, _id: { $ne: this._id } })) {
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+    
+    this.slug = slug;
+  }
+  next();
+});
+
+// Auto-generate SKU if not provided
+productSchema.pre('save', async function(next) {
+  if (!this.sku && this.isNew) {
+    const prefix = this.category === 'men' ? 'SV-M' : this.category === 'women' ? 'SV-W' : 'SV-U';
+    const count = await this.constructor.countDocuments();
+    this.sku = `${prefix}-${(count + 1).toString().padStart(3, '0')}`;
+  }
+  next();
+});
 
 module.exports = mongoose.model('Product', productSchema);
