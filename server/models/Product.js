@@ -73,4 +73,11 @@ productSchema.pre('save', async function() {
   }
 });
 
+// Compound & text search indexes for performance
+productSchema.index({ status: 1, category: 1 });
+productSchema.index({ status: 1, featured: 1 });
+productSchema.index({ status: 1, price: 1 });
+productSchema.index({ status: 1, createdAt: -1 });
+productSchema.index({ name: 'text', description: 'text', brand: 'text' });
+
 module.exports = mongoose.model('Product', productSchema);
