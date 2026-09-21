@@ -5,13 +5,15 @@ const Product = require('../models/Product');
 const Coupon = require('../models/Coupon');
 const Cart = require('../models/Cart');
 const { evaluateCouponDiscount } = require('./couponController');
+const notificationService = require('../services/notificationService');
+const shippingService = require('../services/shippingService');
 
 // @desc    Create Razorpay Order (Backend calculates exact amount)
 // @route   POST /api/payment/create-order
 // @access  Private
 const createPaymentOrder = async (req, res, next) => {
   try {
-    const { items, promoCode } = req.body;
+    const { items, promoCode, shippingAddress = {}, shippingMethod = 'standard' } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
@@ -84,8 +86,21 @@ const createPaymentOrder = async (req, res, next) => {
       validCouponCode = couponResult.code;
     }
 
-    // 3. Shipping calculation (Free over ₹15,000)
-    const shipping = subtotal >= 15000 ? 0 : 150;
+    // 3. Shipping calculation via central shipping service
+    const shippingCalc = shippingService.calculateShipping({
+      subtotal,
+      method: shippingMethod,
+      address: shippingAddress
+    });
+
+    if (!shippingCalc.valid) {
+      return res.status(400).json({
+        success: false,
+        message: shippingCalc.message || 'Invalid delivery address or pincode restricted'
+      });
+    }
+
+    const shipping = shippingCalc.charge;
 
     // 4. Calculate final payable amount in INR
     const finalTotal = Math.max(0, subtotal - discountAmount) + shipping;
@@ -153,6 +168,7 @@ const verifyPayment = async (req, res, next) => {
       items,
       promoCode,
       shippingAddress,
+      shippingMethod = 'standard',
       notes
     } = req.body;
 
@@ -279,7 +295,13 @@ const verifyPayment = async (req, res, next) => {
       }
     }
 
-    const shipping = subtotal >= 15000 ? 0 : 150;
+    const shippingCalc = shippingService.calculateShipping({
+      subtotal,
+      method: shippingMethod,
+      address: shippingAddress
+    });
+
+    const shipping = shippingCalc.valid ? shippingCalc.charge : (subtotal >= 15000 ? 0 : 150);
     const finalTotal = Math.max(0, subtotal - discountAmount) + shipping;
 
     // 6. Mandatory Correction 3: Atomic Stock Decrements
@@ -334,6 +356,11 @@ const verifyPayment = async (req, res, next) => {
       subtotal,
       discount: discountAmount,
       shipping,
+      shippingMethod: shippingCalc.method || 'standard',
+      shippingMethodName: shippingCalc.methodName || 'Standard Delivery',
+      shippingZone: shippingCalc.zone || 'NATIONAL',
+      estimatedDeliveryRange: shippingCalc.deliveryRange || '3-5 business days',
+      estimatedDeliveryDate: shippingCalc.estimatedDeliveryDate,
       shippingAddress,
       promoCode: validCouponCode,
       coupon: couponSnapshot,
@@ -365,6 +392,71 @@ const verifyPayment = async (req, res, next) => {
     const populatedOrder = await Order.findById(order._id)
       .populate('user', 'name email')
       .populate('items.product', 'name category');
+
+    // Notification Integration: PAYMENT_SUCCESS, ORDER_CONFIRMED, NEW_ORDER & Stock Alerts
+    try {
+      const orderShortId = order._id.toString().slice(-8).toUpperCase();
+
+      await notificationService.createCustomerNotification({
+        recipient: userId,
+        type: 'PAYMENT_SUCCESS',
+        title: 'Payment Successful',
+        message: `Payment of ₹${finalTotal} for order #${orderShortId} was verified successfully.`,
+        relatedResourceType: 'PAYMENT',
+        relatedResourceId: String(razorpay_payment_id),
+        metadata: { razorpayOrderId: razorpay_order_id, razorpayPaymentId: razorpay_payment_id, amount: finalTotal },
+        referenceId: `PAYMENT_SUCCESS_${razorpay_payment_id}`
+      });
+
+      await notificationService.createCustomerNotification({
+        recipient: userId,
+        type: 'ORDER_CONFIRMED',
+        title: 'Order Confirmed',
+        message: `Your order #${orderShortId} has been confirmed.`,
+        relatedResourceType: 'ORDER',
+        relatedResourceId: String(order._id),
+        metadata: { orderId: order._id, total: finalTotal },
+        referenceId: `ORDER_CONFIRMED_${order._id}`
+      });
+
+      await notificationService.createAdminNotification({
+        type: 'NEW_ORDER',
+        title: 'New Paid Order',
+        message: `New paid order #${orderShortId} placed by ${req.user.name || 'Customer'}.`,
+        relatedResourceType: 'ORDER',
+        relatedResourceId: String(order._id),
+        metadata: { orderId: order._id, total: finalTotal },
+        referenceId: `NEW_ORDER_${order._id}`
+      });
+
+      // Stock Alerts Check
+      for (const item of validatedItems) {
+        const p = await Product.findById(item.product);
+        if (p) {
+          if (p.stock === 0) {
+            await notificationService.createAdminNotification({
+              type: 'OUT_OF_STOCK',
+              title: 'Out of Stock Alert',
+              message: `Product "${p.name}" is now out of stock.`,
+              relatedResourceType: 'PRODUCT',
+              relatedResourceId: String(p._id),
+              referenceId: `OUT_OF_STOCK_${p._id}_0`
+            });
+          } else if (p.stock <= 5) {
+            await notificationService.createAdminNotification({
+              type: 'LOW_STOCK',
+              title: 'Low Stock Alert',
+              message: `Product "${p.name}" is low in stock (${p.stock} remaining).`,
+              relatedResourceType: 'PRODUCT',
+              relatedResourceId: String(p._id),
+              referenceId: `LOW_STOCK_${p._id}_${p.stock}`
+            });
+          }
+        }
+      }
+    } catch (notifErr) {
+      console.warn('Payment notification trigger notice:', notifErr.message);
+    }
 
     res.json({
       success: true,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import AdminLayout from './admin/AdminLayout';
 import Dashboard from './admin/Dashboard';
 import ProductsManager from './admin/ProductsManager';
@@ -10,6 +10,8 @@ import ReviewsManager from './admin/ReviewsManager';
 import CouponsManager from './admin/CouponsManager';
 import ReturnsManager from './admin/ReturnsManager';
 import Toast from './Toast';
+
+const AdminSettings = lazy(() => import('./admin/AdminSettings'));
 
 function AdminDashboard({ currentUser, onLogout }) {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -55,15 +57,9 @@ function AdminDashboard({ currentUser, onLogout }) {
         return <CouponsManager />;
       case 'settings':
         return (
-          <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            minHeight: '400px', textAlign: 'center', background: 'white', borderRadius: '16px',
-            border: '1px solid #e5e5e5', padding: '48px 24px', margin: '2rem'
-          }}>
-            <div style={{ fontSize: '64px', marginBottom: '24px', opacity: 0.4 }}>⚙️</div>
-            <h3 style={{ fontSize: '24px', fontWeight: 700, color: '#333', margin: '0 0 12px' }}>Settings</h3>
-            <p style={{ fontSize: '16px', color: '#888', margin: 0 }}>Settings panel coming soon...</p>
-          </div>
+          <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading Settings...</div>}>
+            <AdminSettings showToast={showToast} />
+          </Suspense>
         );
       default:
         return <Dashboard />;

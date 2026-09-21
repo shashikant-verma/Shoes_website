@@ -18,4 +18,6 @@ userSchema.methods.comparePassword = function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
+userSchema.index({ role: 1, createdAt: -1 });
+
 module.exports = mongoose.model('User', userSchema);

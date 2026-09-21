@@ -13,12 +13,45 @@ const getAuthHeaders = () => {
 };
 
 const paymentService = {
+  // Get available shipping methods
+  getShippingMethods: async (subtotal, address) => {
+    try {
+      const response = await axios.get(`${API_URL}/shipping/methods`, {
+        params: { subtotal, address: JSON.stringify(address || {}) },
+        ...getAuthHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to load shipping methods'
+      };
+    }
+  },
+
+  // Calculate exact shipping fee
+  calculateShipping: async ({ subtotal, method, address }) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/shipping/calculate`,
+        { subtotal, method, address },
+        getAuthHeaders()
+      );
+      return response.data;
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to calculate shipping'
+      };
+    }
+  },
+
   // Step 1: Request server to calculate total & create Razorpay Order
-  createPaymentOrder: async ({ items, promoCode, shippingAddress }) => {
+  createPaymentOrder: async ({ items, promoCode, shippingAddress, shippingMethod }) => {
     try {
       const response = await axios.post(
         `${API_URL}/payment/create-order`,
-        { items, promoCode, shippingAddress },
+        { items, promoCode, shippingAddress, shippingMethod },
         getAuthHeaders()
       );
       return response.data;

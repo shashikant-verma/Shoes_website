@@ -13,4 +13,4 @@ function ProductSkeleton() {
   );
 }
 
-export default ProductSkeleton;
+export default React.memo(ProductSkeleton);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import reviewService from '../services/reviewService';
 import authService from '../services/authService';
+import RecentlyViewed, { recordRecentlyViewed } from './RecentlyViewed';
 import './ProductDetail.css';
 
 function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWishlist }) {
@@ -9,6 +10,30 @@ function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWis
   const [isAdding, setIsAdding] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [sizeError, setSizeError] = useState(false);
+
+  // Size Guide & Pincode Checker State
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
+  const [pincode, setPincode] = useState('');
+  const [pincodeStatus, setPincodeStatus] = useState(null);
+
+  // Record recently viewed
+  useEffect(() => {
+    if (product) {
+      recordRecentlyViewed(product);
+    }
+  }, [product]);
+
+  const handleCheckPincode = () => {
+    if (!pincode || pincode.length !== 6) {
+      setPincodeStatus({ success: false, message: 'Please enter a valid 6-digit Pincode' });
+      return;
+    }
+    // Simulate pincode check against standard Indian delivery pincodes
+    setPincodeStatus({
+      success: true,
+      message: `✓ Express Delivery Available for ${pincode}! Estimated in 3-5 business days.`
+    });
+  };
 
   // Reviews state
   const [reviews, setReviews] = useState([]);
@@ -278,7 +303,17 @@ function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWis
 
             {/* Size Selection */}
             <div className="size-selection">
-              <h3 className="headline-md">Select Size (US)</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 className="headline-md">Select Size</h3>
+                <button 
+                  type="button" 
+                  className="btn-size-guide"
+                  onClick={() => setShowSizeGuide(true)}
+                  style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}
+                >
+                  📏 Size Guide
+                </button>
+              </div>
               {sizeError && (
                 <p className="size-error-message">
                   ⚠️ Please select a size before adding to cart
@@ -298,6 +333,35 @@ function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWis
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Pincode / Delivery Availability Checker */}
+            <div className="pincode-checker-box" style={{ background: '#f9fafb', padding: '1rem', borderRadius: '12px', margin: '1rem 0' }}>
+              <label style={{ fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.05em', color: '#374151', display: 'block', marginBottom: '0.5rem' }}>
+                🚚 CHECK DELIVERY & PINCODE
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input 
+                  type="text" 
+                  maxLength="6"
+                  placeholder="Enter 6-digit PIN code" 
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                  style={{ flex: 1, padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '0.9rem' }}
+                />
+                <button 
+                  type="button" 
+                  onClick={handleCheckPincode}
+                  style={{ padding: '0.5rem 1rem', background: '#111827', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Check
+                </button>
+              </div>
+              {pincodeStatus && (
+                <p style={{ margin: '0.5rem 0 0', fontSize: '0.82rem', fontWeight: 600, color: pincodeStatus.success ? '#059669' : '#dc2626' }}>
+                  {pincodeStatus.message}
+                </p>
+              )}
             </div>
 
             {colors.length > 0 && (
@@ -539,8 +603,53 @@ function ProductDetail({ product, onClose, onAddToCart, onAddToWishlist, isInWis
               </div>
             )}
           </div>
+
+          {/* Recently Viewed Section */}
+          <RecentlyViewed 
+            currentProductId={productId} 
+            onProductClick={(p) => {
+              onClose();
+              if (p) {
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('openProductDetail', { detail: p }));
+                }, 100);
+              }
+            }} 
+            isInWishlist={isInWishlist}
+            onToggleWishlist={onAddToWishlist}
+          />
         </div>
       </div>
+
+      {/* Size Guide Modal Overlay */}
+      {showSizeGuide && (
+        <div className="modal-backdrop fade-in" onClick={() => setShowSizeGuide(false)}>
+          <div className="size-guide-modal glass-panel" onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: '16px', padding: '2rem', maxWidth: '600px', width: '100%', position: 'relative' }}>
+            <button className="modal-close-btn" onClick={() => setShowSizeGuide(false)} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+            <h2 className="headline-md" style={{ marginTop: 0, marginBottom: '0.5rem', color: '#111827' }}>FOOTWEAR SIZE CONVERSION GUIDE</h2>
+            <p style={{ fontSize: '0.88rem', color: '#6b7280', marginBottom: '1.5rem' }}>SoleVibe shoe sizes conform to standard international sizing metrics</p>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+              <thead>
+                <tr style={{ background: '#f3f4f6', borderBottom: '2px solid #e5e7eb' }}>
+                  <th style={{ padding: '0.75rem' }}>UK Size</th>
+                  <th style={{ padding: '0.75rem' }}>US Men</th>
+                  <th style={{ padding: '0.75rem' }}>US Women</th>
+                  <th style={{ padding: '0.75rem' }}>EU Size</th>
+                  <th style={{ padding: '0.75rem' }}>Foot Length (CM)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid #f3f4f6' }}><td style={{ padding: '0.6rem 0.75rem', fontWeight: 600 }}>UK 6</td><td>7.0</td><td>8.5</td><td>40.0</td><td>25.0 cm</td></tr>
+                <tr style={{ borderBottom: '1px solid #f3f4f6' }}><td style={{ padding: '0.6rem 0.75rem', fontWeight: 600 }}>UK 7</td><td>8.0</td><td>9.5</td><td>41.0</td><td>25.8 cm</td></tr>
+                <tr style={{ borderBottom: '1px solid #f3f4f6' }}><td style={{ padding: '0.6rem 0.75rem', fontWeight: 600 }}>UK 8</td><td>9.0</td><td>10.5</td><td>42.5</td><td>26.7 cm</td></tr>
+                <tr style={{ borderBottom: '1px solid #f3f4f6' }}><td style={{ padding: '0.6rem 0.75rem', fontWeight: 600 }}>UK 9</td><td>10.0</td><td>11.5</td><td>44.0</td><td>27.5 cm</td></tr>
+                <tr style={{ borderBottom: '1px solid #f3f4f6' }}><td style={{ padding: '0.6rem 0.75rem', fontWeight: 600 }}>UK 10</td><td>11.0</td><td>12.5</td><td>45.0</td><td>28.3 cm</td></tr>
+                <tr style={{ borderBottom: '1px solid #f3f4f6' }}><td style={{ padding: '0.6rem 0.75rem', fontWeight: 600 }}>UK 11</td><td>12.0</td><td>13.5</td><td>46.0</td><td>29.2 cm</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

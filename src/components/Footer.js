@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
+import CustomerSupportModal from './CustomerSupportModal';
 import './Footer.css';
 
 function Footer({ onPageChange }) {
   const currentYear = new Date().getFullYear();
+  const [supportTopic, setSupportTopic] = useState(null);
 
   return (
     <footer className="footer">
@@ -40,19 +42,18 @@ function Footer({ onPageChange }) {
                 <li><a href="#" onClick={(e) => { e.preventDefault(); onPageChange && onPageChange('products'); }} className="footer-link">All Shoes</a></li>
                 <li><a href="#" onClick={(e) => { e.preventDefault(); onPageChange && onPageChange('men'); }} className="footer-link">Men's Shoes</a></li>
                 <li><a href="#" onClick={(e) => { e.preventDefault(); onPageChange && onPageChange('women'); }} className="footer-link">Women's Shoes</a></li>
-                <li><a href="#" className="footer-link">New Releases</a></li>
-                <li><a href="#" className="footer-link">Sale</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); onPageChange && onPageChange('new-arrivals'); }} className="footer-link">New Releases</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); onPageChange && onPageChange('sale'); }} className="footer-link">Sale</a></li>
               </ul>
             </div>
 
             <div className="footer-column">
               <h3 className="footer-heading telemetry-label">SUPPORT</h3>
               <ul className="footer-list">
-                <li><a href="#" className="footer-link">Help Center</a></li>
-                <li><a href="#" className="footer-link">Size Guide</a></li>
-                <li><a href="#" className="footer-link">Shipping Info</a></li>
-                <li><a href="#" className="footer-link">Returns & Exchanges</a></li>
-                <li><a href="#" className="footer-link">Contact Us</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); setSupportTopic('faq'); }} className="footer-link">Help Center / FAQ</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); setSupportTopic('shipping'); }} className="footer-link">Shipping Info</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); setSupportTopic('returns'); }} className="footer-link">Returns & Exchanges</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); setSupportTopic('contact'); }} className="footer-link">Contact Us</a></li>
               </ul>
             </div>
 
@@ -126,6 +127,11 @@ function Footer({ onPageChange }) {
       >
         ↑
       </button>
+
+      {/* Customer Support Modal */}
+      {supportTopic && (
+        <CustomerSupportModal topic={supportTopic} onClose={() => setSupportTopic(null)} />
+      )}
     </footer>
   );
 }

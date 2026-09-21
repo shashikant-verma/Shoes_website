@@ -93,6 +93,45 @@ const authService = {
     localStorage.setItem('auth', JSON.stringify(authData));
   },
 
+  // Update profile
+  updateProfile: async (profileData) => {
+    try {
+      const response = await api.put('/auth/profile', profileData);
+      // Update user in localStorage
+      const auth = localStorage.getItem('auth');
+      if (auth) {
+        const parsed = JSON.parse(auth);
+        parsed.user = { ...parsed.user, ...response.data.user };
+        localStorage.setItem('auth', JSON.stringify(parsed));
+      }
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to update profile'
+      };
+    }
+  },
+
+  // Update password
+  updatePassword: async (passwordData) => {
+    try {
+      const response = await api.put('/auth/update-password', passwordData);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to update password'
+      };
+    }
+  },
+
   // Clear auth data
   clearAuth: () => {
     localStorage.removeItem('auth');

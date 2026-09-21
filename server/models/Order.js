@@ -15,6 +15,11 @@ const orderSchema = new mongoose.Schema({
   subtotal: { type: Number, required: true, min: 0 },
   discount: { type: Number, default: 0, min: 0 },
   shipping: { type: Number, default: 0, min: 0 },
+  shippingMethod: { type: String, default: 'standard' },
+  shippingMethodName: { type: String, default: 'Standard Shipping' },
+  shippingZone: { type: String, default: 'NATIONAL' },
+  estimatedDeliveryRange: { type: String, default: '3-5 business days' },
+  shipmentReferenceId: { type: String, sparse: true },
   shippingAddress: { type: mongoose.Schema.Types.Mixed },
   promoCode: String,
   coupon: {
@@ -51,6 +56,8 @@ const orderSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 orderSchema.index({ 'payment.razorpayPaymentId': 1 }, { unique: true, sparse: true });
+orderSchema.index({ user: 1, createdAt: -1 });
+orderSchema.index({ status: 1, createdAt: -1 });
 
 orderSchema.virtual('total').get(function() {
   return this.subtotal - this.discount + this.shipping;

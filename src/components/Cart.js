@@ -305,6 +305,24 @@ function Cart({ cart, onUpdateCart, onRemoveItem, currentUser, showToast, onOrde
           <h1 className="headline-lg">Your Items ({cart.reduce((sum, item) => sum + item.quantity, 0)})</h1>
         </div>
 
+        {/* Free Shipping Progress Bar */}
+        <div className="free-shipping-bar" style={{ background: '#f9fafb', padding: '1rem 1.25rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid #e5e7eb' }}>
+          {subtotal >= 2000 ? (
+            <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: '#059669' }}>
+              🎉 Congratulations! You have unlocked FREE STANDARD SHIPPING!
+            </p>
+          ) : (
+            <>
+              <p style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>
+                Add <strong style={{ color: '#ef4444' }}>₹{(2000 - subtotal).toLocaleString()}</strong> more to unlock <strong style={{ color: '#059669' }}>FREE SHIPPING</strong>
+              </p>
+              <div style={{ width: '100%', height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ width: `${Math.min(100, (subtotal / 2000) * 100)}%`, height: '100%', background: '#10b981', transition: 'width 0.3s ease' }}></div>
+              </div>
+            </>
+          )}
+        </div>
+
         <div className="cart-layout">
           {/* Left - Cart Items */}
           <div className="cart-items">

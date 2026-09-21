@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { NotificationBell } from './NotificationCenter';
 import './Navbar.css';
 
 function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onPageChange, currentPage }) {
@@ -141,6 +142,9 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
                   </svg>
                   {cartCount > 0 && <span className="action-badge">{cartCount}</span>}
                 </button>
+
+                {/* Notifications Bell */}
+                <NotificationBell onNavigate={onPageChange} />
               </>
             )}
             
@@ -160,11 +164,14 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
                 <div className="user-menu-divider"></div>
                 {userType === 'user' && (
                   <>
+                    <button className="user-menu-item" onClick={() => handleNavClick('account')}>
+                      👤 My Account
+                    </button>
                     <button className="user-menu-item" onClick={() => handleNavClick('orders')}>
-                      My Orders
+                      📦 My Orders
                     </button>
                     <button className="user-menu-item" onClick={() => handleNavClick('addresses')}>
-                      My Addresses
+                      📍 My Addresses
                     </button>
                   </>
                 )}

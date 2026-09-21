@@ -3,6 +3,7 @@ const ReturnRequest = require('../models/ReturnRequest');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const razorpayService = require('../services/razorpayService');
+const notificationService = require('../services/notificationService');
 
 // Allowed Return Status Transitions (Admin flexible transitions)
 const ALLOWED_RETURN_TRANSITIONS = {
@@ -190,6 +191,33 @@ const createReturnRequest = async (req, res, next) => {
       .populate('user', 'name email')
       .populate('order')
       .populate('statusHistory.changedBy', 'name email');
+
+    // Notification Integration: RETURN_REQUESTED (Customer & Admin)
+    try {
+      const orderShortId = order._id.toString().slice(-8).toUpperCase();
+      await notificationService.createCustomerNotification({
+        recipient: userId,
+        type: 'RETURN_REQUESTED',
+        title: 'Return Requested',
+        message: `Return request submitted for order #${orderShortId}. Amount: ₹${totalRefundAmount}.`,
+        relatedResourceType: 'RETURN',
+        relatedResourceId: String(returnRequest._id),
+        metadata: { orderId: order._id, refundAmount: totalRefundAmount },
+        referenceId: `RETURN_REQUESTED_${returnRequest._id}`
+      });
+
+      await notificationService.createAdminNotification({
+        type: 'RETURN_REQUESTED',
+        title: 'New Return Request',
+        message: `Return request submitted for order #${orderShortId} by ${req.user.name || 'Customer'}.`,
+        relatedResourceType: 'RETURN',
+        relatedResourceId: String(returnRequest._id),
+        metadata: { orderId: order._id, refundAmount: totalRefundAmount },
+        referenceId: `ADMIN_RETURN_REQUESTED_${returnRequest._id}`
+      });
+    } catch (notifErr) {
+      console.warn('Return notification trigger notice:', notifErr.message);
+    }
 
     res.status(201).json({
       success: true,
@@ -441,6 +469,33 @@ const updateReturnStatus = async (req, res, next) => {
       .populate('order')
       .populate('statusHistory.changedBy', 'name email');
 
+    // Notification Integration for Return Status Update
+    try {
+      const RETURN_NOTIF_MAP = {
+        APPROVED: { type: 'RETURN_APPROVED', title: 'Return Approved', msg: 'has been approved.' },
+        REJECTED: { type: 'RETURN_REJECTED', title: 'Return Rejected', msg: 'has been rejected.' },
+        RECEIVED: { type: 'RETURN_RECEIVED', title: 'Return Item Received', msg: 'item has been received at our warehouse.' },
+        REFUND_PENDING: { type: 'REFUND_PENDING', title: 'Refund Pending', msg: 'refund is being processed.' },
+        REFUNDED: { type: 'REFUND_COMPLETED', title: 'Refund Completed', msg: `refund of ₹${returnRequest.refund.amount} was completed.` }
+      };
+
+      const notifInfo = RETURN_NOTIF_MAP[targetStatus];
+      if (notifInfo && returnRequest.user) {
+        await notificationService.createCustomerNotification({
+          recipient: returnRequest.user._id || returnRequest.user,
+          type: notifInfo.type,
+          title: notifInfo.title,
+          message: `Your return request ${notifInfo.msg}`,
+          relatedResourceType: 'RETURN',
+          relatedResourceId: String(returnRequest._id),
+          metadata: { status: targetStatus, refundAmount: returnRequest.refund.amount },
+          referenceId: `RETURN_${targetStatus}_${returnRequest._id}`
+        });
+      }
+    } catch (notifErr) {
+      console.warn('Return status notification trigger notice:', notifErr.message);
+    }
+
     res.json({
       success: true,
       message: 'Return request status updated successfully',
@@ -515,6 +570,27 @@ const processRefund = async (req, res, next) => {
       });
       await returnRequest.save();
 
+      try {
+        await notificationService.createCustomerNotification({
+          recipient: returnRequest.user,
+          type: 'REFUND_FAILED',
+          title: 'Refund Processing Failed',
+          message: `Refund execution failed: ${rzpErr.message}`,
+          relatedResourceType: 'RETURN',
+          relatedResourceId: String(returnRequest._id),
+          referenceId: `REFUND_FAILED_${returnRequest._id}_${Date.now()}`
+        });
+
+        await notificationService.createAdminNotification({
+          type: 'REFUND_FAILED',
+          title: 'Refund Execution Failed',
+          message: `Refund of ₹${returnRequest.refund.amount} failed for return #${returnRequest._id}`,
+          relatedResourceType: 'RETURN',
+          relatedResourceId: String(returnRequest._id),
+          referenceId: `ADMIN_REFUND_FAILED_${returnRequest._id}_${Date.now()}`
+        });
+      } catch (e) {}
+
       return res.status(400).json({
         success: false,
         message: `Razorpay refund execution failed: ${rzpErr.message}`
@@ -549,6 +625,21 @@ const processRefund = async (req, res, next) => {
       .populate('user', 'name email')
       .populate('order')
       .populate('statusHistory.changedBy', 'name email');
+
+    try {
+      await notificationService.createCustomerNotification({
+        recipient: returnRequest.user._id || returnRequest.user,
+        type: 'REFUND_COMPLETED',
+        title: 'Refund Completed',
+        message: `Your refund of ₹${returnRequest.refund.amount} was completed successfully.`,
+        relatedResourceType: 'RETURN',
+        relatedResourceId: String(returnRequest._id),
+        metadata: { razorpayRefundId: rzpRefund.id, amount: returnRequest.refund.amount },
+        referenceId: `REFUND_COMPLETED_${returnRequest._id}`
+      });
+    } catch (notifErr) {
+      console.warn('Refund completed notification notice:', notifErr.message);
+    }
 
     res.json({
       success: true,

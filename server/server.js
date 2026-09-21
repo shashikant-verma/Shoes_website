@@ -17,6 +17,10 @@ const couponRoutes = require('./routes/couponRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const returnRoutes = require('./routes/returnRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const shippingRoutes = require('./routes/shippingRoutes');
+const { startAbandonedCartScheduler } = require('./services/abandonedCartService');
 
 // Import middleware
 const errorMiddleware = require('./middleware/errorMiddleware');
@@ -51,6 +55,7 @@ connectDB();
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin/customers', userRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/wishlist', wishlistRoutes);
@@ -60,6 +65,9 @@ app.use('/api/coupons', couponRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/returns', returnRoutes);
 app.use('/api/admin/inventory', inventoryRoutes);
+app.use('/api/admin/analytics', analyticsRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/shipping', shippingRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -81,6 +89,10 @@ const server = app.listen(PORT, '0.0.0.0', (err) => {
     process.exit(1);
   }
   console.log(`⚡ SoleVibe Server running on port ${PORT}`);
+  
+  // Start Abandoned Cart Scheduler
+  startAbandonedCartScheduler();
+
   console.log(`🌐 Local: http://localhost:${PORT}/api/health`);
   console.log(`🌐 Network: http://192.168.29.21:${PORT}/api/health`);
   console.log(`📡 CORS enabled for: localhost:3000-3002, 192.168.29.21:3000-3002`);

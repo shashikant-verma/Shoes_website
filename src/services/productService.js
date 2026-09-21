@@ -46,17 +46,12 @@ const productService = {
   // Create product (Admin only)
   createProduct: async (productData) => {
     try {
-      console.log('ProductService: Creating product with data:', productData); // Debug log
       const response = await api.post('/products', productData);
-      console.log('ProductService: Create response:', response.data); // Debug log
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.error('ProductService: Create error:', error); // Debug log
-      console.error('ProductService: Error response:', error.response?.data); // Debug log
-      
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to create product',
@@ -77,6 +72,22 @@ const productService = {
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to update product'
+      };
+    }
+  },
+
+  // Update product status (Admin only)
+  updateProductStatus: async (id, status) => {
+    try {
+      const response = await api.put(`/products/${id}/status`, { status });
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to update product status'
       };
     }
   },

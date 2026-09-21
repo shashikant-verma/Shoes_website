@@ -2,6 +2,7 @@ const express = require('express');
 const {
   getUsers,
   getUser,
+  updateUserStatus,
   updateUser,
   deleteUser
 } = require('../controllers/userController');
@@ -15,6 +16,7 @@ router.use(authorize('ADMIN'));
 
 router.get('/', getUsers);
 router.get('/:id', getUser);
+router.put('/:id/status', updateUserStatus);
 router.put('/:id', updateUser);
 router.delete('/:id', deleteUser);
 

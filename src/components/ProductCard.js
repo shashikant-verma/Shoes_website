@@ -1,6 +1,6 @@
 import React from 'react';
 
-function ProductCard({ product, onProductClick, index = 0, isInWishlist = false, onToggleWishlist }) {
+function ProductCard({ product, onProductClick, index = 0, isInWishlist = false, onToggleWishlist, onQuickView }) {
   const rating = Number(product.rating) || 0;
   const reviewCount = Number(product.reviews ?? product.reviewCount) || 0;
   const badge = product.badge || (product.stock === 0 ? 'SOLD OUT' : 'NEW');
@@ -60,7 +60,17 @@ function ProductCard({ product, onProductClick, index = 0, isInWishlist = false,
           loading="lazy"
         />
         <div className="product-overlay">
-          <span className="quick-view-btn">Quick View</span>
+          <span 
+            className="quick-view-btn"
+            onClick={(e) => {
+              if (onQuickView) {
+                e.stopPropagation();
+                onQuickView(product);
+              }
+            }}
+          >
+            Quick View
+          </span>
         </div>
       </div>
 
@@ -101,4 +111,4 @@ function ProductCard({ product, onProductClick, index = 0, isInWishlist = false,
   );
 }
 
-export default ProductCard;
+export default React.memo(ProductCard);

@@ -10,6 +10,7 @@ function CollectionPage({
   heroImage,
   onAddToCart, 
   onProductClick,
+  onQuickView,
   wishlist = [],
   onToggleWishlist
 }) {
@@ -472,7 +473,16 @@ function CollectionPage({
 
                       {/* Quick Actions */}
                       <div className="product-overlay">
-                        <button className="quick-view-btn">Quick View</button>
+                        <button 
+                          className="quick-view-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onQuickView) onQuickView(product);
+                            else onProductClick(product);
+                          }}
+                        >
+                          Quick View
+                        </button>
                       </div>
                     </div>
 

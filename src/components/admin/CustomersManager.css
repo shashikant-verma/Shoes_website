@@ -130,6 +130,7 @@
   background: #fff; border-radius: 20px; width: 100%; max-width: 500px;
   box-shadow: 0 25px 80px rgba(0,0,0,0.2); overflow: hidden;
 }
+.cm-modal-large { max-width: 650px; }
 .cm-modal-header {
   display: flex; align-items: center; gap: 1rem; padding: 1.75rem;
   background: linear-gradient(135deg, #1a1a1a, #2d2d2d); color: #fff;
@@ -155,6 +156,42 @@
 .cm-detail-item span { font-size: 14px; font-weight: 600; color: #222; }
 .cm-id { font-family: 'Courier New', monospace; font-size: 11px !important; color: #888 !important; }
 .cm-role-pill { display: inline-block; padding: 0.25rem 0.65rem; border-radius: 20px; font-size: 12px !important; }
+
+/* Modal Sections */
+.cm-modal-section { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid #f0f0f0; }
+.cm-section-title { font-size: 13px; font-weight: 800; color: #444; margin: 0 0 0.85rem; letter-spacing: 0.04em; }
+
+.cm-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+.cm-mini-stat {
+  background: #fafafa; border: 1px solid #eaeaea; border-radius: 10px;
+  padding: 0.75rem 0.5rem; text-align: center; display: flex; flex-direction: column; gap: 0.2rem;
+}
+.cm-mini-stat .val { font-size: 16px; font-weight: 800; color: #111; }
+.cm-mini-stat .lbl { font-size: 10px; font-weight: 700; color: #888; text-transform: uppercase; }
+
+.cm-addresses-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.cm-address-card {
+  background: #fafafa; border: 1px solid #e5e5e5; border-radius: 10px; padding: 0.85rem 1rem;
+}
+.cm-address-top { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+.cm-address-top strong { font-size: 13px; color: #222; }
+.cm-address-badge { background: #e5e7eb; color: #374151; font-size: 10px; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 4px; }
+.cm-default-badge { background: #dbeafe; color: #1e40af; font-size: 10px; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 4px; }
+.cm-address-card p { margin: 0.15rem 0; font-size: 12px; color: #555; }
+.cm-phone { color: #888 !important; font-size: 11px !important; margin-top: 0.3rem !important; }
+
+.cm-orders-table-wrap { overflow-x: auto; border: 1px solid #eee; border-radius: 10px; }
+.cm-orders-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cm-orders-table th { background: #f9f9f9; padding: 0.6rem 0.75rem; text-align: left; font-size: 10px; font-weight: 800; color: #888; text-transform: uppercase; border-bottom: 1px solid #eee; }
+.cm-orders-table td { padding: 0.65rem 0.75rem; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
+.cm-orders-table tr:last-child td { border-bottom: none; }
+.cm-status-tag { padding: 0.2rem 0.5rem; border-radius: 12px; font-weight: 700; font-size: 11px; display: inline-block; }
+.status-confirmed, .status-processing { background: #fef3c7; color: #92400e; }
+.status-shipped, .status-out_for_delivery { background: #dbeafe; color: #1e40af; }
+.status-delivered { background: #dcfce7; color: #166534; }
+.status-cancelled { background: #fee2e2; color: #991b1b; }
+
+.cm-empty-text { font-size: 13px; color: #9ca3af; font-style: italic; margin: 0; }
 
 .cm-modal-actions { display: flex; flex-direction: column; gap: 1rem; }
 .cm-toggle-btn-lg {

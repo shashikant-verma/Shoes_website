@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import './App.css';
 import './styles/design-tokens.css';
 import AdminDashboard from './components/AdminDashboard';
@@ -18,6 +18,9 @@ import ConnectionStatus from './components/ConnectionStatus';
 import authService from './services/authService';
 import './styles/fashion-overrides.css';
 
+const CustomerAccount = lazy(() => import('./components/CustomerAccount'));
+const QuickViewModal = lazy(() => import('./components/QuickViewModal'));
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userType, setUserType] = useState(null);
@@ -27,9 +30,21 @@ function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [wishlist, setWishlist] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Custom Event Listener to open ProductDetail from sub-components like RecentlyViewed
+  useEffect(() => {
+    const handleOpenDetail = (e) => {
+      if (e.detail) {
+        setSelectedProduct(e.detail);
+      }
+    };
+    window.addEventListener('openProductDetail', handleOpenDetail);
+    return () => window.removeEventListener('openProductDetail', handleOpenDetail);
+  }, []);
   const [completedOrder, setCompletedOrder] = useState(null);
   
   // Toast notification state
@@ -528,6 +543,7 @@ function App() {
           categoryFilter="all"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
         />
@@ -538,6 +554,7 @@ function App() {
           onAddToCart={handleAddToCart} 
           categoryFilter={categoryFilter}
           onProductClick={handleProductClick}
+          onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
         />
@@ -550,6 +567,7 @@ function App() {
           categoryFilter="men"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
         />
@@ -562,6 +580,7 @@ function App() {
           categoryFilter="women"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
         />
@@ -575,6 +594,7 @@ function App() {
           saleMode={true}
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
         />
@@ -587,6 +607,7 @@ function App() {
           categoryFilter="running"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
         />
@@ -599,6 +620,7 @@ function App() {
           categoryFilter="training"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
         />
@@ -611,6 +633,7 @@ function App() {
           categoryFilter="trail"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
         />
@@ -623,6 +646,7 @@ function App() {
           categoryFilter="racing"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
         />
@@ -635,6 +659,7 @@ function App() {
           categoryFilter="new"
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
+          onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
         />
@@ -672,14 +697,46 @@ function App() {
         <OrderHistory orders={orders} />
       )}
 
+      {currentPage === 'account' && (
+        <Suspense fallback={<div className="loading-container"><div className="loading-spinner">⚡</div></div>}>
+          <CustomerAccount 
+            currentUser={currentUser}
+            onLogout={handleLogout}
+            orders={orders}
+            wishlist={wishlist}
+            onPageChange={handlePageChange}
+            onProductClick={handleProductClick}
+            onAddToCart={handleAddToCart}
+            onRemoveFromWishlist={handleRemoveFromWishlist}
+            showToast={showToast}
+          />
+        </Suspense>
+      )}
+
       {selectedProduct && (
         <ProductDetail
           product={selectedProduct}
           onClose={handleCloseDetail}
           onAddToCart={handleAddToCart}
           onAddToWishlist={handleAddToWishlist}
-          isInWishlist={wishlist.some(item => item.id === selectedProduct.id)}
+          isInWishlist={wishlist.some(item => (item.id || item._id) === (selectedProduct.id || selectedProduct._id))}
         />
+      )}
+
+      {quickViewProduct && (
+        <Suspense fallback={null}>
+          <QuickViewModal
+            product={quickViewProduct}
+            onClose={() => setQuickViewProduct(null)}
+            onAddToCart={handleAddToCart}
+            onAddToWishlist={handleAddToWishlist}
+            isInWishlist={wishlist.some(item => (item.id || item._id) === (quickViewProduct.id || quickViewProduct._id))}
+            onViewFullDetails={(p) => {
+              setQuickViewProduct(null);
+              setSelectedProduct(p);
+            }}
+          />
+        </Suspense>
       )}
 
       <Footer onPageChange={handlePageChange} />

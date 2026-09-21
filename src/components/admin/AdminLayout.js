@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { NotificationBell } from '../NotificationCenter';
 import './AdminLayout.css';
 
 // Admin Icons Component
@@ -223,10 +224,7 @@ function AdminLayout({ children, currentUser, onLogout, activeSection = 'dashboa
               />
             </div>
 
-            <button className="header-notifications" title="Notifications">
-              <AdminIcons.Notifications />
-              <span className="notification-badge">3</span>
-            </button>
+            <NotificationBell onNavigate={handleNavigation} />
 
             <div className="admin-profile-dropdown">
               <button 

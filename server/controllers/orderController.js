@@ -3,6 +3,8 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Coupon = require('../models/Coupon');
 const { evaluateCouponDiscount } = require('./couponController');
+const notificationService = require('../services/notificationService');
+const shippingService = require('../services/shippingService');
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -12,6 +14,7 @@ const createOrder = async (req, res, next) => {
     const {
       items,
       shippingAddress,
+      shippingMethod = 'standard',
       promoCode,
       notes
     } = req.body;
@@ -122,10 +125,23 @@ const createOrder = async (req, res, next) => {
       };
     }
 
-    // Calculate shipping (free over ₹15,000)
-    const shipping = subtotal >= 15000 ? 0 : 150;
+    // Calculate shipping using central shipping rate engine
+    const shippingCalc = shippingService.calculateShipping({
+      subtotal,
+      method: shippingMethod,
+      address: shippingAddress
+    });
 
-    // Create order with coupon snapshot and initial status history
+    if (!shippingCalc.valid) {
+      return res.status(400).json({
+        success: false,
+        message: shippingCalc.message || 'Invalid delivery destination address or restricted pincode'
+      });
+    }
+
+    const shipping = shippingCalc.charge;
+
+    // Create order with coupon snapshot, shipping metadata, and initial status history
     const userId = req.user._id || req.user.id;
     const order = await Order.create({
       user: userId,
@@ -133,6 +149,11 @@ const createOrder = async (req, res, next) => {
       subtotal,
       discount,
       shipping,
+      shippingMethod: shippingCalc.method,
+      shippingMethodName: shippingCalc.methodName,
+      shippingZone: shippingCalc.zone,
+      estimatedDeliveryRange: shippingCalc.deliveryRange,
+      estimatedDeliveryDate: shippingCalc.estimatedDeliveryDate,
       shippingAddress,
       promoCode: validCouponCode,
       coupon: couponSnapshot,
@@ -159,6 +180,59 @@ const createOrder = async (req, res, next) => {
       .populate('user', 'name email')
       .populate('items.product', 'name category')
       .populate('statusHistory.changedBy', 'name email');
+
+    // Notification Integration: ORDER_CONFIRMED (Customer) & NEW_ORDER (Admin)
+    try {
+      const orderShortId = order._id.toString().slice(-8).toUpperCase();
+      await notificationService.createCustomerNotification({
+        recipient: userId,
+        type: 'ORDER_CONFIRMED',
+        title: 'Order Confirmed',
+        message: `Your order #${orderShortId} has been successfully placed.`,
+        relatedResourceType: 'ORDER',
+        relatedResourceId: String(order._id),
+        metadata: { orderId: order._id, total: order.subtotal - order.discount + order.shipping },
+        referenceId: `ORDER_CONFIRMED_${order._id}`
+      });
+
+      await notificationService.createAdminNotification({
+        type: 'NEW_ORDER',
+        title: 'New Order Received',
+        message: `New order #${orderShortId} placed by ${req.user.name || 'Customer'}.`,
+        relatedResourceType: 'ORDER',
+        relatedResourceId: String(order._id),
+        metadata: { orderId: order._id, total: order.subtotal - order.discount + order.shipping },
+        referenceId: `NEW_ORDER_${order._id}`
+      });
+
+      // Stock Alerts Check
+      for (const item of validatedItems) {
+        const p = await Product.findById(item.product);
+        if (p) {
+          if (p.stock === 0) {
+            await notificationService.createAdminNotification({
+              type: 'OUT_OF_STOCK',
+              title: 'Out of Stock Alert',
+              message: `Product "${p.name}" is now out of stock.`,
+              relatedResourceType: 'PRODUCT',
+              relatedResourceId: String(p._id),
+              referenceId: `OUT_OF_STOCK_${p._id}_0`
+            });
+          } else if (p.stock <= 5) {
+            await notificationService.createAdminNotification({
+              type: 'LOW_STOCK',
+              title: 'Low Stock Alert',
+              message: `Product "${p.name}" is low in stock (${p.stock} remaining).`,
+              relatedResourceType: 'PRODUCT',
+              relatedResourceId: String(p._id),
+              referenceId: `LOW_STOCK_${p._id}_${p.stock}`
+            });
+          }
+        }
+      }
+    } catch (notifErr) {
+      console.warn('Order notification trigger notice:', notifErr.message);
+    }
 
     res.status(201).json({
       success: true,
@@ -189,14 +263,15 @@ const getOrders = async (req, res, next) => {
       query.status = status;
     }
 
-    // Execute query
+    // Execute query with .lean() for document hydration efficiency
     const orders = await Order.find(query)
       .populate('user', 'name email')
       .populate('items.product', 'name category')
       .populate('statusHistory.changedBy', 'name email')
       .sort({ createdAt: -1 })
       .limit(Number(limit))
-      .skip((Number(page) - 1) * Number(limit));
+      .skip((Number(page) - 1) * Number(limit))
+      .lean();
 
     // Get total count
     const totalOrders = await Order.countDocuments(query);
@@ -383,6 +458,34 @@ const updateOrderStatus = async (req, res, next) => {
       .populate('user', 'name email')
       .populate('items.product', 'name category')
       .populate('statusHistory.changedBy', 'name email');
+
+    // Notification Integration for Order Status Updates
+    try {
+      const STATUS_NOTIF_MAP = {
+        processing: { type: 'ORDER_PROCESSING', title: 'Order Processing', msg: 'is now being processed.' },
+        shipped: { type: 'ORDER_SHIPPED', title: 'Order Shipped', msg: 'has been shipped!' },
+        out_for_delivery: { type: 'ORDER_OUT_FOR_DELIVERY', title: 'Out for Delivery', msg: 'is out for delivery.' },
+        delivered: { type: 'ORDER_DELIVERED', title: 'Order Delivered', msg: 'has been delivered.' },
+        cancelled: { type: 'ORDER_CANCELLED', title: 'Order Cancelled', msg: 'has been cancelled.' }
+      };
+
+      const notifInfo = STATUS_NOTIF_MAP[targetStatus];
+      if (notifInfo && order.user) {
+        const orderShortId = order._id.toString().slice(-8).toUpperCase();
+        await notificationService.createCustomerNotification({
+          recipient: order.user._id || order.user,
+          type: notifInfo.type,
+          title: notifInfo.title,
+          message: `Your order #${orderShortId} ${notifInfo.msg}`,
+          relatedResourceType: 'ORDER',
+          relatedResourceId: String(order._id),
+          metadata: { status: targetStatus, trackingNumber, carrier },
+          referenceId: `ORDER_${targetStatus.toUpperCase()}_${order._id}`
+        });
+      }
+    } catch (notifErr) {
+      console.warn('Status notification trigger notice:', notifErr.message);
+    }
 
     res.json({
       success: true,
