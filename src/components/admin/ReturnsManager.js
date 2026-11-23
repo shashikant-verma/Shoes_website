@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './ReturnsManager.css';
 import returnService from '../../services/returnService';
 
@@ -19,11 +19,7 @@ function ReturnsManager() {
 
   const RETURNS_PER_PAGE = 10;
 
-  useEffect(() => {
-    loadReturns();
-  }, [currentPage, statusFilter]);
-
-  const loadReturns = async () => {
+  const loadReturns = useCallback(async () => {
     setLoading(true);
     try {
       const filters = { page: currentPage, limit: RETURNS_PER_PAGE };
@@ -45,7 +41,11 @@ function ReturnsManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, statusFilter]);
+
+  useEffect(() => {
+    loadReturns();
+  }, [loadReturns]);
 
   const handleStatusUpdate = async (newStatus) => {
     if (!selectedReturn) return;

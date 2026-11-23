@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Review = require('../models/Review');
 const Product = require('../models/Product');
+const User = require('../models/User');
 const Order = require('../models/Order');
 
 // Helper function to recalculate dynamic aggregate rating for a product
@@ -36,6 +37,42 @@ const updateProductRating = async (productId) => {
     }
   } catch (error) {
     console.error('Error updating product rating aggregate:', error);
+  }
+};
+
+// @desc    Get approved customer reviews across all products (Storefront Showcase)
+// @route   GET /api/reviews
+// @access  Public
+const getApprovedReviews = async (req, res, next) => {
+  try {
+    const limit = Math.min(20, Math.max(1, Number(req.query.limit) || 6));
+    
+    // First try to fetch approved reviews that have verified purchase
+    let reviews = await Review.find({
+      status: 'APPROVED',
+      isVerifiedPurchase: true
+    })
+      .populate('user', 'name')
+      .populate('product', 'name image price slug')
+      .sort({ rating: -1, createdAt: -1 })
+      .limit(limit);
+
+    // If verified purchase count is low, load any approved review
+    if (reviews.length < 3) {
+      reviews = await Review.find({ status: 'APPROVED' })
+        .populate('user', 'name')
+        .populate('product', 'name image price slug')
+        .sort({ rating: -1, createdAt: -1 })
+        .limit(limit);
+    }
+
+    res.json({
+      success: true,
+      count: reviews.length,
+      data: reviews
+    });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -473,6 +510,7 @@ const rejectReviewAdmin = async (req, res, next) => {
 
 module.exports = {
   updateProductRating,
+  getApprovedReviews,
   getProductReviews,
   getMyReview,
   createReview,

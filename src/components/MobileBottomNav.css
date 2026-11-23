@@ -1,0 +1,110 @@
+/* ==========================================================================
+   SOLEVIBE — MOBILE STICKY BOTTOM NAVIGATION BAR
+   Strictly scoped for mobile viewports (< 768px)
+   ========================================================================== */
+
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border-subtle, #e5e7eb);
+    box-shadow: 0 -4px 20px rgba(17, 24, 39, 0.08);
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
+  }
+
+  .mobile-bottom-nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    height: 56px;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 8px;
+  }
+
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    background: none;
+    border: none;
+    color: var(--color-slate-600, #4b5563);
+    min-width: 52px;
+    min-height: 48px;
+    padding: 4px 6px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-nav-item:hover,
+  .mobile-nav-item:active {
+    color: var(--color-slate-900, #111827);
+  }
+
+  .mobile-nav-item.active {
+    color: var(--color-kinetic-red, #ff4d2e);
+  }
+
+  .mobile-nav-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+  }
+
+  .mobile-nav-item.active .mobile-nav-icon svg {
+    stroke-width: 2.35px;
+    transform: scale(1.08);
+    transition: transform 0.2s ease;
+  }
+
+  .mobile-nav-label {
+    font-family: var(--font-body, inherit);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+
+  .mobile-nav-item.active .mobile-nav-label {
+    font-weight: 700;
+  }
+
+  .mobile-nav-badge {
+    position: absolute;
+    top: -5px;
+    right: -8px;
+    background: var(--color-kinetic-red, #ff4d2e);
+    color: #ffffff;
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    border: 1.5px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(255, 77, 46, 0.3);
+  }
+}

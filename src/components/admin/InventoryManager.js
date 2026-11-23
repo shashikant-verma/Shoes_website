@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './InventoryManager.css';
 import inventoryService from '../../services/inventoryService';
 
@@ -41,11 +41,7 @@ function InventoryManager() {
 
   const ITEMS_PER_PAGE = 10;
 
-  useEffect(() => {
-    loadInventory();
-  }, [currentPage, statusFilter, categoryFilter, sortBy, sortOrder]);
-
-  const loadInventory = async () => {
+  const loadInventory = useCallback(async () => {
     setLoading(true);
     try {
       const params = {
@@ -84,7 +80,11 @@ function InventoryManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, statusFilter, categoryFilter, sortBy, sortOrder, searchQuery]);
+
+  useEffect(() => {
+    loadInventory();
+  }, [loadInventory]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();

@@ -32,7 +32,7 @@ const orderSchema = new mongoose.Schema({
   payment: {
     provider: { type: String, default: 'RAZORPAY' },
     razorpayOrderId: { type: String, sparse: true },
-    razorpayPaymentId: { type: String, sparse: true },
+    razorpayPaymentId: { type: String },
     status: { type: String, enum: ['PENDING', 'CREATED', 'PAID', 'FAILED', 'CANCELLED'], default: 'PENDING' },
     amount: { type: Number },
     currency: { type: String, default: 'INR' },

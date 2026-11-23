@@ -27,6 +27,18 @@ const createAddress = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Missing required address fields' });
     }
 
+    // Validate 10-digit Indian mobile number
+    const cleanedPhone = String(phone).trim().replace(/\s+/g, '');
+    if (!/^[6-9]\d{9}$/.test(cleanedPhone)) {
+      return res.status(400).json({ success: false, message: 'Invalid mobile number. Please enter a valid 10-digit Indian mobile number.' });
+    }
+
+    // Validate 6-digit Indian PIN code
+    const cleanedPostal = String(postalCode).trim();
+    if (!/^\d{6}$/.test(cleanedPostal)) {
+      return res.status(400).json({ success: false, message: 'Invalid postal PIN code. Must be exactly 6 digits.' });
+    }
+
     // Check if this is the user's first address
     const existingCount = await Address.countDocuments({ user: req.user._id });
     const isDefault = existingCount === 0;
@@ -117,8 +129,7 @@ const deleteAddress = async (req, res, next) => {
     if (wasDefault) {
       const remainingAddress = await Address.findOne({ user: req.user._id }).sort({ createdAt: -1 });
       if (remainingAddress) {
-        remainingAddress.isDefault = true;
-        await remainingAddress.save();
+        await Address.updateOne({ _id: remainingAddress._id }, { $set: { isDefault: true } });
       }
     }
 

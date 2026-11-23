@@ -1,0 +1,106 @@
+[
+  {
+    "feature": "System Health & Database Connection",
+    "testPerformed": "GET /api/health with active mongod process",
+    "passed": true,
+    "actualResult": "HTTP 200, database state: connected",
+    "evidence": "Uptime: undefineds, Environment: undefined",
+    "remaining": "None"
+  },
+  {
+    "feature": "Guest Browsing (No Auth)",
+    "testPerformed": "GET /api/products, /api/categories, /api/settings without Authorization header",
+    "passed": true,
+    "actualResult": "Accessible to unauthenticated visitors. Products: 5, Categories: 8",
+    "evidence": "HTTP status 200 on all public storefront endpoints. No redirects to login.",
+    "remaining": "None"
+  },
+  {
+    "feature": "Customer Authentication",
+    "testPerformed": "POST /api/auth/login with valid customer credentials",
+    "passed": true,
+    "actualResult": "Logged in as John Doe (john@example.com)",
+    "evidence": "JWT token generated with 30d expiry",
+    "remaining": "None"
+  },
+  {
+    "feature": "Guest Cart & Wishlist Sync",
+    "testPerformed": "POST /api/cart and POST /api/wishlist on login, GET /api/cart & /api/wishlist verification",
+    "passed": true,
+    "actualResult": "Cart and wishlist persisted to MongoDB. Items found in DB.",
+    "evidence": "Cart items: 3, Wishlist items: 2",
+    "remaining": "None"
+  },
+  {
+    "feature": "Address Validation & CRUD",
+    "testPerformed": "POST /api/addresses (invalid & valid), PUT /api/addresses/:id, PATCH /:id/default",
+    "passed": true,
+    "actualResult": "Invalid address rejected (400). Valid address created, updated, and set as default in MongoDB.",
+    "evidence": "Created address ID: 6b03df490edfcefd289e8f3f, Phone: 9876543210, PIN: 400050",
+    "remaining": "None"
+  },
+  {
+    "feature": "Order Creation & MongoDB Persistence",
+    "testPerformed": "POST /api/orders with real product, verified address, and GET /api/orders/:id",
+    "passed": true,
+    "actualResult": "Order created and retrieved from MongoDB without dummy values.",
+    "evidence": "Order ID: 6b03df490edfcefd289e8f41, Total: ₹4049, Status: confirmed",
+    "remaining": "None"
+  },
+  {
+    "feature": "Order History Synchronization",
+    "testPerformed": "GET /api/orders across simulated fresh session",
+    "passed": true,
+    "actualResult": "Customer orders fetched from MongoDB, persistent across devices.",
+    "evidence": "Found 10 orders in customer account.",
+    "remaining": "None"
+  },
+  {
+    "feature": "Admin Categories & Settings Persistence",
+    "testPerformed": "POST /api/categories, PUT /api/settings, GET /api/settings, DELETE /api/categories/:id",
+    "passed": true,
+    "actualResult": "Category created/deleted in MongoDB. Store settings updated persistently in MongoDB.",
+    "evidence": "Store name: \"SoleVibe Footwear India\", Tagline: \"Precision Engineered Footwear\"",
+    "remaining": "None"
+  },
+  {
+    "feature": "Product Image Upload (Multer)",
+    "testPerformed": "POST /api/upload/single with valid PNG image and file system verification",
+    "passed": true,
+    "actualResult": "Image uploaded successfully. Stored URL: /uploads/img-1795415882422-963608130.png",
+    "evidence": "File verified on local storage: YES",
+    "remaining": "None"
+  },
+  {
+    "feature": "Razorpay Payment Integration (Modes)",
+    "testPerformed": "POST /api/payment/create-order with server-side price calculation",
+    "passed": true,
+    "actualResult": "Payment order created. Active Mode: DEVELOPMENT MOCK MODE (Detected placeholder keys)",
+    "evidence": "Razorpay Order ID: mock_order_1795415882438_mdj31, KeyId: rzp_test_placeholder_key_id",
+    "remaining": "Production Razorpay Key & Secret required for live transactions"
+  },
+  {
+    "feature": "Razorpay Webhook Signature & Idempotency",
+    "testPerformed": "HMAC-SHA256 signature verification, duplicate event detection, invalid signature test",
+    "passed": true,
+    "actualResult": "Valid signature accepted (200), duplicate event acknowledged idempotently, invalid signature rejected (400).",
+    "evidence": "First call: ok, Duplicate: Duplicate webhook event already processed, Invalid rejected: true",
+    "remaining": "None"
+  },
+  {
+    "feature": "Transactional Email Service",
+    "testPerformed": "emailService.sendOrderConfirmationEmail() invocation",
+    "passed": true,
+    "actualResult": "Email dispatched. Mode: MOCK / CONSOLE LOGGING (SMTP credentials unset)",
+    "evidence": "Recipient: test@example.com, Mode: Mock",
+    "remaining": "Real SMTP credentials (SMTP_HOST, SMTP_USER, SMTP_PASS) required for outbound email delivery"
+  },
+  {
+    "feature": "Shipping Logistics Provider",
+    "testPerformed": "courierProvider.createShipment() and provider resolution",
+    "passed": true,
+    "actualResult": "Shipment created. Mode: MOCK COURIER SIMULATOR (SHIPPING_PROVIDER=mock)",
+    "evidence": "Carrier: BlueDart, Tracking Number: BD-TRK-882523",
+    "remaining": "Production Shiprocket/Delhivery account credentials required for real airway bill generation"
+  }
+]

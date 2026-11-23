@@ -10,7 +10,9 @@ function Login({ onLogin, isAdmin }) {
     name: ''
   });
   const [isSignUp, setIsSignUp] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [inlineNotice, setInlineNotice] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const showToast = (message, type = 'success') => {
@@ -26,17 +28,19 @@ function Login({ onLogin, isAdmin }) {
       ...formData,
       [e.target.name]: e.target.value
     });
+    if (inlineNotice) setInlineNotice(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setInlineNotice(null);
 
     try {
       if (isSignUp && !isAdmin) {
         // User registration
         if (!formData.name.trim()) {
-          showToast('Please enter your name.', 'error');
+          showToast('Please enter your full name.', 'error');
           setIsLoading(false);
           return;
         }
@@ -48,8 +52,8 @@ function Login({ onLogin, isAdmin }) {
         }
 
         const result = await authService.register({
-          name: formData.name,
-          email: formData.email,
+          name: formData.name.trim(),
+          email: formData.email.trim().toLowerCase(),
           password: formData.password
         });
 
@@ -57,34 +61,23 @@ function Login({ onLogin, isAdmin }) {
           const { token, user } = result.data;
           authService.setAuth({ token, user, userType: 'user' });
           showToast(`Welcome to SoleVibe, ${user.name}!`, 'success');
-          setTimeout(() => onLogin(user, 'user'), 1000);
+          setTimeout(() => onLogin(user, 'user'), 800);
         } else {
-          // More user-friendly error messages
           if (result.message && result.message.includes('already exists')) {
-            const switchToLogin = window.confirm('📧 Email Already Registered!\n\nThis email address is already associated with an account.\n\n✅ Would you like to switch to login mode?\n\nClick "OK" to login, or "Cancel" to use a different email.');
-            
-            if (switchToLogin) {
-              setIsSignUp(false);
-              // Keep the email, clear other fields
-              setFormData(prev => ({
-                ...prev,
-                name: '',
-                password: ''
-              }));
-              showToast('Switched to login mode. Please enter your password.', 'info');
-            } else {
-              showToast('Please use a different email address.', 'warning');
-            }
-          } else if (result.message && result.message.includes('validation')) {
-            showToast('Please check: Name (2+ chars), Valid email, Password (6+ chars)', 'error');
+            setInlineNotice({
+              type: 'warning',
+              text: 'This email is already registered. Please sign in instead.',
+              action: 'SWITCH_TO_LOGIN'
+            });
+            showToast('Email already registered! Switched to sign in.', 'info');
           } else {
-            showToast(`Registration failed: ${result.message}`, 'error');
+            showToast(`Registration failed: ${result.message || 'Please check your information.'}`, 'error');
           }
         }
       } else {
-        // User/Admin login
+        // User / Admin login
         const result = await authService.login({
-          email: formData.email,
+          email: formData.email.trim().toLowerCase(),
           password: formData.password
         });
 
@@ -93,15 +86,15 @@ function Login({ onLogin, isAdmin }) {
           
           // Check if admin trying to login to admin route
           if (isAdmin && user.role !== 'ADMIN') {
-            showToast('Access denied! Admin credentials required.', 'error');
+            showToast('Access denied! Administrator credentials required.', 'error');
             setIsLoading(false);
             return;
           }
 
-          // Check if user trying to login to user route with admin account
+          // Check if admin trying to login on customer route
           if (!isAdmin && user.role === 'ADMIN') {
-            showToast('Admin account detected! Redirecting to admin portal...', 'info');
-            setTimeout(() => { window.location.href = '/admin'; }, 2000);
+            showToast('Admin account detected! Redirecting to admin workspace...', 'info');
+            setTimeout(() => { window.location.href = '/admin'; }, 1500);
             setIsLoading(false);
             return;
           }
@@ -109,131 +102,196 @@ function Login({ onLogin, isAdmin }) {
           const userType = user.role === 'ADMIN' ? 'admin' : 'user';
           authService.setAuth({ token, user, userType });
           showToast(`Welcome back, ${user.name}!`, 'success');
-          setTimeout(() => onLogin(user, userType), 1000);
+          setTimeout(() => onLogin(user, userType), 800);
         } else {
-          if (result.message.includes('Invalid credentials')) {
-            showToast('Invalid email or password! Please check your credentials.', 'error');
+          if (result.message && result.message.includes('Invalid credentials')) {
+            showToast('Invalid email or password. Please verify your credentials.', 'error');
           } else {
-            showToast(`Login failed: ${result.message || 'Please make sure the backend server and MongoDB are running.'}`, 'error');
+            showToast(`Sign in failed: ${result.message || 'Server connection error.'}`, 'error');
           }
         }
       }
     } catch (error) {
       console.error('Authentication error:', error);
-      showToast('Something went wrong. Please try again.', 'error');
+      showToast('An error occurred during authentication. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="login-container">
+    <div className="login-page">
       <Toast 
         message={toast.message} 
         type={toast.type} 
         isVisible={toast.show} 
         onClose={hideToast}
-        duration={4000}
+        duration={3500}
       />
       
-      <div className="login-card">
-        <div className="login-header">
-          <h1>⚡ SOLEVIBE</h1>
-          <p>Premium Performance Footwear</p>
-        </div>
+      <div className="login-card-container">
+        <div className="login-card">
+          {/* Header Brandmark */}
+          <div className="login-brand-header">
+            <span className="brand-icon">⚡</span>
+            <h1 className="brand-wordmark">SOLEVIBE</h1>
+            <p className="brand-tagline">
+              {isAdmin ? 'ADMINISTRATIVE CONTROL PORTAL' : 'ATHLETE ACCESS & ACCOUNT PORTAL'}
+            </p>
+          </div>
 
-        <form className="login-form" onSubmit={handleSubmit}>
-          <h2>
-            {isAdmin ? '🔐 Admin Login' : (isSignUp ? '📝 Create Account' : '👤 User Login')}
-          </h2>
-
-          {!isAdmin && isSignUp && (
-            <div className="form-group">
-              <label>Full Name *</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Enter your name"
-                required
-                disabled={isLoading}
-              />
+          {/* Customer Segmented Tab Control */}
+          {!isAdmin && (
+            <div className="auth-segmented-tabs" role="tablist">
+              <button 
+                type="button" 
+                role="tab"
+                aria-selected={!isSignUp}
+                className={`tab-btn ${!isSignUp ? 'active' : ''}`}
+                onClick={() => { setIsSignUp(false); setInlineNotice(null); }}
+              >
+                SIGN IN
+              </button>
+              <button 
+                type="button" 
+                role="tab"
+                aria-selected={isSignUp}
+                className={`tab-btn ${isSignUp ? 'active' : ''}`}
+                onClick={() => { setIsSignUp(true); setInlineNotice(null); }}
+              >
+                CREATE ACCOUNT
+              </button>
             </div>
           )}
 
-          <div className="form-group">
-            <label>Email Address *</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Enter your email"
-              required
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Password *</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Enter your password"
-              minLength="6"
-              required
-              disabled={isLoading}
-            />
-          </div>
-
-          <button type="submit" className="btn-login" disabled={isLoading}>
-            {isLoading ? '⏳ Processing...' : 
-              (isAdmin ? '🔓 Login as Admin' : (isSignUp ? '✨ Sign Up' : '🔓 Login'))}
-          </button>
-
-          {!isAdmin && (
-            <div className="toggle-auth">
-              <p>
-                {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+          {/* Inline Feedback Notice */}
+          {inlineNotice && (
+            <div className={`auth-inline-notice notice-${inlineNotice.type}`}>
+              <span>{inlineNotice.text}</span>
+              {inlineNotice.action === 'SWITCH_TO_LOGIN' && (
                 <button 
                   type="button" 
-                  onClick={() => setIsSignUp(!isSignUp)}
-                  disabled={isLoading}
+                  className="btn-switch-action"
+                  onClick={() => { setIsSignUp(false); setInlineNotice(null); }}
                 >
-                  {isSignUp ? 'Login' : 'Sign Up'}
+                  Sign In Now →
                 </button>
-              </p>
+              )}
             </div>
           )}
 
-          {isAdmin && (
-            <div className="admin-hint">
-              <small>⚠️ Admin Portal - Authorized Access Only</small>
-              <small>Email: admin@zuxofit.com | Password: admin123</small>
-            </div>
-          )}
+          <form className="login-form" onSubmit={handleSubmit}>
+            {/* Full Name for Sign Up */}
+            {!isAdmin && isSignUp && (
+              <div className="form-group">
+                <label className="form-label" htmlFor="auth-name">Full Name *</label>
+                <input
+                  id="auth-name"
+                  type="text"
+                  name="name"
+                  className="form-input"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="e.g. Alex Morgan"
+                  required
+                  disabled={isLoading}
+                  autoComplete="name"
+                />
+              </div>
+            )}
 
-          {!isAdmin && (
-            <div className="route-link">
-              <small>
-                Are you an admin? 
-                <a href="/admin"> Access Admin Portal</a>
-              </small>
+            {/* Email Address */}
+            <div className="form-group">
+              <label className="form-label" htmlFor="auth-email">Email Address *</label>
+              <input
+                id="auth-email"
+                type="email"
+                name="email"
+                className="form-input"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="athlete@solevibe.com"
+                required
+                disabled={isLoading}
+                autoComplete="email"
+              />
             </div>
-          )}
 
-          {isAdmin && (
-            <div className="route-link">
-              <small>
-                Back to 
-                <a href="/"> User Portal</a>
-              </small>
+            {/* Password with Visibility Toggle */}
+            <div className="form-group">
+              <div className="label-row">
+                <label className="form-label" htmlFor="auth-password">Password *</label>
+                {isSignUp && <span className="helper-hint">Min 6 characters</span>}
+              </div>
+              <div className="password-input-wrapper">
+                <input
+                  id="auth-password"
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  className="form-input password-input"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  minLength="6"
+                  required
+                  disabled={isLoading}
+                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                />
+                <button 
+                  type="button" 
+                  className="btn-toggle-password"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  tabIndex="-1"
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
             </div>
-          )}
-        </form>
+
+            {/* Primary Submit Button */}
+            <button 
+              type="submit" 
+              className="btn-primary btn-auth-submit" 
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <span>PROCESSING...</span>
+                  <span className="btn-icon">⏳</span>
+                </>
+              ) : (
+                <>
+                  <span>{isAdmin ? 'SIGN IN TO ADMIN' : (isSignUp ? 'JOIN THE ROSTER' : 'ACCESS ACCOUNT')}</span>
+                  <span className="btn-icon">→</span>
+                </>
+              )}
+            </button>
+
+            {/* Admin Access Notice */}
+            {isAdmin && (
+              <div className="admin-credentials-box">
+                <span className="cred-badge">AUTHORIZED OPERATORS ONLY</span>
+                <p>Access restricted to authorized SoleVibe store personnel.</p>
+              </div>
+            )}
+
+            {/* Route Cross Links */}
+            <div className="auth-footer-links">
+              {!isAdmin ? (
+                <p>
+                  Store administrator?{' '}
+                  <a href="/admin" className="auth-link">Operator Portal →</a>
+                </p>
+              ) : (
+                <p>
+                  Looking for the customer shop?{' '}
+                  <a href="/" className="auth-link">← Return to Storefront</a>
+                </p>
+              )}
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

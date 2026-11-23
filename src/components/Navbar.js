@@ -2,10 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { NotificationBell } from './NotificationCenter';
 import './Navbar.css';
 
-function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onPageChange, currentPage }) {
+function Navbar({ 
+  currentUser, 
+  userType, 
+  onLogout, 
+  cartCount, 
+  wishlistCount, 
+  onPageChange, 
+  currentPage,
+  onSearch 
+}) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -15,9 +25,45 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Handle Escape key to close open menus
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setMenuOpen(false);
+        setSearchOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (menuOpen && window.innerWidth <= 860) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [menuOpen]);
+
   const handleNavClick = (page) => {
     onPageChange(page);
     setMenuOpen(false);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      if (onSearch) {
+        onSearch(searchTerm.trim());
+      } else {
+        onPageChange('shop', { search: searchTerm.trim() });
+      }
+      setSearchOpen(false);
+    }
   };
 
   return (
@@ -26,7 +72,7 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
       <div className="announcement-bar">
         <div className="announcement-content">
           <span className="announcement-text">
-            🎉 FREE SHIPPING ON ORDERS ABOVE ₹15,000
+            🎉 FREE STANDARD SHIPPING ON ORDERS ABOVE ₹15,000
           </span>
           <span className="announcement-divider">|</span>
           <span className="announcement-text">
@@ -34,7 +80,7 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
           </span>
           <span className="announcement-divider">|</span>
           <span className="announcement-text">
-            SECURE PAYMENTS
+            100% SECURE CHECKOUT
           </span>
         </div>
       </div>
@@ -50,9 +96,32 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
             </div>
           </div>
 
-          {/* Center: Navigation Menu */}
+          {/* Center: Navigation Menu & Mobile Drawer */}
           <div className={`navbar-center ${menuOpen ? 'open' : ''}`}>
+            {/* Mobile Drawer Header */}
+            <div className="mobile-drawer-header">
+              <div className="drawer-brand" onClick={() => handleNavClick('home')}>
+                <span className="brand-icon">⚡</span>
+                <span className="brand-text">SOLE</span>
+                <span className="brand-subtitle">VIBE</span>
+              </div>
+              <button
+                type="button"
+                className="drawer-close-btn"
+                onClick={() => setMenuOpen(false)}
+                aria-label="Close navigation menu"
+              >
+                ✕
+              </button>
+            </div>
+
             <div className="navbar-menu">
+              <button 
+                className={`nav-link ${currentPage === 'shop' ? 'active' : ''}`}
+                onClick={() => handleNavClick('shop')}
+              >
+                ALL SHOES
+              </button>
               {['men', 'women'].map((category) => (
                 <div
                   key={category}
@@ -68,7 +137,7 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
                   <div className="mega-menu">
                     <div className="mega-menu-column">
                       <span className="mega-menu-label">SHOP</span>
-                      <button onClick={() => handleNavClick('products')}>All Shoes</button>
+                      <button onClick={() => handleNavClick('shop')}>All Shoes</button>
                       <button onClick={() => handleNavClick(category)}>Everyday Edit</button>
                     </div>
                     <div className="mega-menu-column">
@@ -84,10 +153,22 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
                 </div>
               ))}
               <button 
-                className={`nav-link ${currentPage === 'accessories' ? 'active' : ''}`}
-                onClick={() => handleNavClick('accessories')}
+                className={`nav-link ${currentPage === 'running' ? 'active' : ''}`}
+                onClick={() => handleNavClick('running')}
               >
-                ACCESSORIES
+                RUNNING
+              </button>
+              <button 
+                className={`nav-link ${currentPage === 'training' ? 'active' : ''}`}
+                onClick={() => handleNavClick('training')}
+              >
+                TRAINING
+              </button>
+              <button 
+                className={`nav-link ${currentPage === 'trail' ? 'active' : ''}`}
+                onClick={() => handleNavClick('trail')}
+              >
+                TRAIL
               </button>
               <button 
                 className={`nav-link ${currentPage === 'ozark' ? 'active' : ''}`}
@@ -95,12 +176,53 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
               >
                 OZARK
               </button>
+              <button 
+                className={`nav-link ${currentPage === 'accessories' ? 'active' : ''}`}
+                onClick={() => handleNavClick('accessories')}
+              >
+                ACCESSORIES
+              </button>
+            </div>
+
+            {/* Mobile Drawer Footer / Account / Currency */}
+            <div className="mobile-drawer-footer">
+              <div className="drawer-collections">
+                <span className="drawer-section-title">COLLECTIONS</span>
+                <div className="drawer-chips-row">
+                  <button className="drawer-chip" onClick={() => handleNavClick('new-arrivals')}>🔥 New Arrivals</button>
+                  <button className="drawer-chip sale" onClick={() => handleNavClick('sale')}>🏷 Sale Picks</button>
+                </div>
+              </div>
+
+              <div className="drawer-account-section">
+                <span className="drawer-section-title">ACCOUNT & SERVICES</span>
+                {currentUser ? (
+                  <div className="drawer-user-box">
+                    <span className="drawer-user-name">Signed in as {currentUser.name}</span>
+                    <div className="drawer-user-links">
+                      <button onClick={() => handleNavClick('account')}>👤 My Account</button>
+                      <button onClick={() => handleNavClick('orders')}>📦 My Orders</button>
+                      <button onClick={() => handleNavClick('addresses')}>📍 Addresses</button>
+                      <button onClick={() => { onLogout(); setMenuOpen(false); }} className="drawer-signout-btn">🚪 Sign Out</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button className="drawer-signin-btn" onClick={() => handleNavClick('login')}>
+                    🔑 Sign In / Register
+                  </button>
+                )}
+              </div>
+
+              <div className="drawer-currency-badge">
+                <span className="currency-flag">🇮🇳</span>
+                <span className="currency-text">India • INR (₹) | Free shipping above ₹15,000</span>
+              </div>
             </div>
           </div>
 
           {/* Right: Actions */}
           <div className="navbar-right">
-            {/* Search */}
+            {/* Search Toggle */}
             <button 
               className="nav-action-btn search-btn"
               onClick={() => setSearchOpen(!searchOpen)}
@@ -113,9 +235,9 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
               </svg>
             </button>
 
-            {userType === 'user' && (
+            {userType !== 'admin' && (
               <>
-                {/* Wishlist */}
+                {/* Wishlist (Available to both guests and users) */}
                 <button 
                   className="nav-action-btn wishlist-btn" 
                   onClick={() => handleNavClick('wishlist')} 
@@ -128,7 +250,7 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
                   {wishlistCount > 0 && <span className="action-badge">{wishlistCount}</span>}
                 </button>
 
-                {/* Cart */}
+                {/* Cart (Available to both guests and users) */}
                 <button 
                   className="nav-action-btn cart-btn" 
                   onClick={() => handleNavClick('cart')} 
@@ -143,8 +265,8 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
                   {cartCount > 0 && <span className="action-badge">{cartCount}</span>}
                 </button>
 
-                {/* Notifications Bell */}
-                <NotificationBell onNavigate={onPageChange} />
+                {/* Notifications Bell for logged-in users */}
+                {currentUser && <NotificationBell onNavigate={onPageChange} />}
               </>
             )}
             
@@ -157,13 +279,13 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
                 </svg>
               </button>
               <div className="user-dropdown">
-                <div className="user-info">
-                  <span className="user-name">{currentUser?.name}</span>
-                  <span className="user-email">{currentUser?.email}</span>
-                </div>
-                <div className="user-menu-divider"></div>
-                {userType === 'user' && (
+                {currentUser ? (
                   <>
+                    <div className="user-info">
+                      <span className="user-name">{currentUser.name}</span>
+                      <span className="user-email">{currentUser.email}</span>
+                    </div>
+                    <div className="user-menu-divider"></div>
                     <button className="user-menu-item" onClick={() => handleNavClick('account')}>
                       👤 My Account
                     </button>
@@ -173,11 +295,23 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
                     <button className="user-menu-item" onClick={() => handleNavClick('addresses')}>
                       📍 My Addresses
                     </button>
+                    <div className="user-menu-divider"></div>
+                    <button className="user-menu-item" onClick={onLogout}>
+                      🚪 Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="user-info">
+                      <span className="user-name">Guest Customer</span>
+                      <span className="user-email">Sign in for saved orders & addresses</span>
+                    </div>
+                    <div className="user-menu-divider"></div>
+                    <button className="user-menu-item" onClick={() => handleNavClick('login')}>
+                      🔑 Sign In / Register
+                    </button>
                   </>
                 )}
-                <button className="user-menu-item" onClick={onLogout}>
-                  Sign Out
-                </button>
               </div>
             </div>
           </div>
@@ -195,25 +329,37 @@ function Navbar({ currentUser, userType, onLogout, cartCount, wishlistCount, onP
           </button>
         </div>
 
-        {/* Search Bar (when opened) */}
+        {/* Mobile Navigation Backdrop Overlay */}
+        {menuOpen && (
+          <div 
+            className="navbar-backdrop" 
+            onClick={() => setMenuOpen(false)} 
+            aria-hidden="true" 
+          />
+        )}
+
+        {/* Global Search Bar Overlay */}
         {searchOpen && (
           <div className="navbar-search">
-            <div className="search-container">
+            <form className="search-container" onSubmit={handleSearchSubmit}>
               <input 
                 type="text" 
                 className="search-input"
-                placeholder="Search for shoes, brands, styles..." 
+                placeholder="Search shoes by name, brand, style (e.g. Carbon, Trail, Sprint)..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 autoFocus
               />
-              <button className="search-submit">Search</button>
+              <button type="submit" className="search-submit">Search</button>
               <button 
+                type="button"
                 className="search-close"
                 onClick={() => setSearchOpen(false)}
                 aria-label="Close search"
               >
                 ✕
               </button>
-            </div>
+            </form>
           </div>
         )}
       </nav>

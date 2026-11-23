@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './AddressBook.css';
 import addressService from '../services/addressService';
 import AddressForm from './AddressForm';
@@ -10,11 +10,7 @@ function AddressBook({ showToast }) {
   const [editingAddress, setEditingAddress] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    loadAddresses();
-  }, []);
-
-  const loadAddresses = async () => {
+  const loadAddresses = useCallback(async () => {
     setLoading(true);
     const result = await addressService.getAddresses();
     if (result.success) {
@@ -23,7 +19,11 @@ function AddressBook({ showToast }) {
       showToast && showToast(result.message || 'Failed to load addresses', 'error');
     }
     setLoading(false);
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    loadAddresses();
+  }, [loadAddresses]);
 
   const handleAddNew = () => {
     setEditingAddress(null);

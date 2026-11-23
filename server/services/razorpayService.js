@@ -38,11 +38,20 @@ const razorpayService = {
       return false;
     }
 
-    const secret = process.env.RAZORPAY_KEY_SECRET || 'rzp_test_placeholder_key_secret';
+    const isProduction = process.env.NODE_ENV === 'production';
+    const secret = process.env.RAZORPAY_KEY_SECRET;
+
+    // In production, reject immediately if secret is missing or placeholder
+    if (isProduction && (!secret || secret === 'rzp_test_placeholder_key_secret' || secret.includes('placeholder'))) {
+      console.error('[Security] Production payment verification rejected: missing or placeholder RAZORPAY_KEY_SECRET');
+      return false;
+    }
+
+    const activeSecret = secret || 'rzp_test_placeholder_key_secret';
     const body = `${razorpay_order_id}|${razorpay_payment_id}`;
 
     const expectedSignature = crypto
-      .createHmac('sha256', secret)
+      .createHmac('sha256', activeSecret)
       .update(body.toString())
       .digest('hex');
 

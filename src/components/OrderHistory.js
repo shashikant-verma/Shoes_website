@@ -334,7 +334,7 @@ function OrderHistory({ orders = [] }) {
                           <h4 className="order-item-name">{item.name}</h4>
                           <div className="order-item-specs">
                             {item.size && (
-                              <span className="spec-badge">Size: US {item.size}</span>
+                              <span className="spec-badge">Size: UK {item.size}</span>
                             )}
                             <span className="spec-badge">Qty: {item.quantity || 1}</span>
                             {item.color && (
@@ -587,7 +587,7 @@ function OrderHistory({ orders = [] }) {
                       <img src={it.image} alt={it.name} />
                       <div className="preview-text">
                         <span className="name">{it.name}</span>
-                        <span className="qty">Size: US {it.size || 'N/A'} • Quantity: {it.quantity || 1}</span>
+                        <span className="qty">Size: UK {it.size || 'N/A'} • Quantity: {it.quantity || 1}</span>
                       </div>
                       <span className="price">₹{((it.price || 0) * (it.quantity || 1)).toLocaleString()}</span>
                     </div>

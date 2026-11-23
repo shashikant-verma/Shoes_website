@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './CustomersManager.css';
 import api from '../../services/api';
 
@@ -19,11 +19,7 @@ function CustomersManager() {
 
   const LIMIT = 10;
 
-  useEffect(() => {
-    loadCustomers();
-  }, [currentPage, roleFilter, statusFilter]);
-
-  const loadCustomers = async () => {
+  const loadCustomers = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: currentPage, limit: LIMIT });
@@ -43,7 +39,11 @@ function CustomersManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, roleFilter, statusFilter, searchQuery]);
+
+  useEffect(() => {
+    loadCustomers();
+  }, [loadCustomers]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();

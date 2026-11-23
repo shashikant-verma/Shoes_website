@@ -1,14 +1,14 @@
-/* SoleVibe premium fashion storefront layer. Behavior remains in the existing components. */
+/* SoleVibe premium fashion storefront layer. Aligned with design.md tokens. */
 :root {
   --fashion-max: 1440px;
   --fashion-gutter: clamp(1rem, 3vw, 3.5rem);
-  --fashion-red: #c9232d;
-  --fashion-red-dark: #9f1823;
-  --fashion-ink: #171717;
-  --fashion-muted: #6f6a66;
-  --fashion-wash: #f7f5f2;
-  --fashion-line: #e7e2dd;
-  --fashion-shadow: 0 18px 45px rgba(30, 20, 15, 0.09);
+  --fashion-red: var(--color-kinetic-red, #ff4d2e);
+  --fashion-red-dark: var(--color-kinetic-hover, #e03e22);
+  --fashion-ink: var(--color-slate-900, #111827);
+  --fashion-muted: var(--color-slate-600, #4b5563);
+  --fashion-wash: var(--color-alabaster, #f9fafb);
+  --fashion-line: var(--color-line-subtle, #e5e7eb);
+  --fashion-shadow: 0 12px 28px rgba(17, 24, 39, 0.08);
 }
 
 .App {

@@ -1,12 +1,15 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 const razorpayService = require('../services/razorpayService');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Coupon = require('../models/Coupon');
 const Cart = require('../models/Cart');
+const PaymentTransaction = require('../models/PaymentTransaction');
 const { evaluateCouponDiscount } = require('./couponController');
 const notificationService = require('../services/notificationService');
 const shippingService = require('../services/shippingService');
+const emailService = require('../services/emailService');
 
 // @desc    Create Razorpay Order (Backend calculates exact amount)
 // @route   POST /api/payment/create-order
@@ -108,9 +111,18 @@ const createPaymentOrder = async (req, res, next) => {
 
     // 5. Create Razorpay order via Razorpay SDK
     let rzpOrder;
+    const isProduction = process.env.NODE_ENV === 'production';
     const isPlaceholderKey = !process.env.RAZORPAY_KEY_ID || 
                              process.env.RAZORPAY_KEY_ID === 'rzp_test_placeholder_key_id' || 
                              process.env.RAZORPAY_KEY_ID.includes('placeholder');
+
+    // Production security guard: fail closed if live credentials are not provisioned
+    if (isProduction && isPlaceholderKey) {
+      return res.status(500).json({
+        success: false,
+        message: 'Payment gateway configuration error. Production transactions require valid credentials.'
+      });
+    }
 
     if (isPlaceholderKey) {
       const mockRzpId = `mock_order_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -128,6 +140,12 @@ const createPaymentOrder = async (req, res, next) => {
         });
       } catch (rzpErr) {
         console.warn('Razorpay API SDK notice:', rzpErr.message);
+        if (isProduction) {
+          return res.status(502).json({
+            success: false,
+            message: 'Payment service temporarily unavailable. Please try again later.'
+          });
+        }
         const mockRzpId = `mock_order_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         rzpOrder = {
           id: mockRzpId,
@@ -135,6 +153,25 @@ const createPaymentOrder = async (req, res, next) => {
           currency: 'INR'
         };
       }
+    }
+
+    // 6. Audit in PaymentTransaction
+    try {
+      await PaymentTransaction.create({
+        user: req.user._id,
+        razorpayOrderId: rzpOrder.id,
+        amount: finalTotal,
+        currency: 'INR',
+        status: 'INITIATED',
+        metadata: {
+          itemsCount: validatedItems.length,
+          discountAmount,
+          shippingCharge: shipping,
+          promoCode: validCouponCode
+        }
+      });
+    } catch (txnErr) {
+      console.warn('PaymentTransaction init audit log notice:', txnErr.message);
     }
 
     res.json({
@@ -187,13 +224,25 @@ const verifyPayment = async (req, res, next) => {
     });
 
     if (!isSignatureValid) {
+      // Record failure audit
+      try {
+        await PaymentTransaction.create({
+          user: req.user._id,
+          razorpayOrderId: razorpay_order_id,
+          razorpayPaymentId: razorpay_payment_id,
+          amount: 0,
+          status: 'FAILED',
+          failureReason: 'Invalid payment signature mismatch'
+        });
+      } catch (_) {}
+
       return res.status(400).json({
         success: false,
         message: 'Invalid payment signature. Verification failed.'
       });
     }
 
-    // Mandatory Check 2: Idempotency Check (Check if order already created for this payment)
+    // Mandatory Check 2: Idempotency Check
     const existingOrder = await Order.findOne({
       $or: [
         { 'payment.razorpayPaymentId': razorpay_payment_id },
@@ -211,7 +260,7 @@ const verifyPayment = async (req, res, next) => {
       });
     }
 
-    // Mandatory Check 3: Optional Razorpay API Fetch check
+    // Optional Check 3: Razorpay API Fetch check
     const paymentDetails = await razorpayService.fetchPayment(razorpay_payment_id);
     if (paymentDetails) {
       if (paymentDetails.order_id && paymentDetails.order_id !== razorpay_order_id) {
@@ -301,10 +350,10 @@ const verifyPayment = async (req, res, next) => {
       address: shippingAddress
     });
 
-    const shipping = shippingCalc.valid ? shippingCalc.charge : (subtotal >= 15000 ? 0 : 150);
+    const shipping = shippingCalc.valid ? shippingCalc.charge : (subtotal >= 2000 ? 0 : 150);
     const finalTotal = Math.max(0, subtotal - discountAmount) + shipping;
 
-    // 6. Mandatory Correction 3: Atomic Stock Decrements
+    // 6. Atomic Stock Decrements
     for (const item of validatedItems) {
       const updatedProduct = await Product.findOneAndUpdate(
         { _id: item.product, stock: { $gte: item.quantity } },
@@ -337,7 +386,7 @@ const verifyPayment = async (req, res, next) => {
       }
     }
 
-    // 7. Mandatory Correction 6: Atomic Coupon Usage Update
+    // 7. Atomic Coupon Usage Update
     if (validCouponCode) {
       await Coupon.findOneAndUpdate(
         {
@@ -348,7 +397,7 @@ const verifyPayment = async (req, res, next) => {
       );
     }
 
-    // 8. Create Paid Order with initial status history
+    // 8. Create Paid Order
     const userId = req.user._id || req.user.id;
     const order = await Order.create({
       user: userId,
@@ -368,7 +417,7 @@ const verifyPayment = async (req, res, next) => {
       status: 'confirmed',
       statusHistory: [{
         status: 'confirmed',
-        note: 'Order confirmed after successful payment',
+        note: 'Order confirmed after successful payment verification',
         changedBy: userId,
         changedAt: new Date()
       }],
@@ -383,7 +432,27 @@ const verifyPayment = async (req, res, next) => {
       }
     });
 
-    // 9. Mandatory Correction 7: Clear user's Cart in MongoDB after verified payment & order creation
+    // 9. Record Success in PaymentTransaction
+    try {
+      await PaymentTransaction.findOneAndUpdate(
+        { razorpayOrderId: razorpay_order_id },
+        {
+          order: order._id,
+          user: userId,
+          razorpayPaymentId: razorpay_payment_id,
+          razorpaySignature: razorpay_signature,
+          amount: finalTotal,
+          currency: 'INR',
+          status: 'SUCCESS',
+          paymentMethod: 'razorpay'
+        },
+        { upsert: true, returnDocument: 'after' }
+      );
+    } catch (txnErr) {
+      console.warn('PaymentTransaction success log error:', txnErr.message);
+    }
+
+    // 10. Clear user's Cart in MongoDB
     await Cart.findOneAndUpdate(
       { user: req.user._id },
       { $set: { items: [] } }
@@ -393,10 +462,17 @@ const verifyPayment = async (req, res, next) => {
       .populate('user', 'name email')
       .populate('items.product', 'name category');
 
-    // Notification Integration: PAYMENT_SUCCESS, ORDER_CONFIRMED, NEW_ORDER & Stock Alerts
-    try {
-      const orderShortId = order._id.toString().slice(-8).toUpperCase();
+    // 11. Transactional Email Dispatches
+    const orderShortId = order._id.toString().slice(-8).toUpperCase();
+    if (req.user.email) {
+      emailService.sendPaymentSuccessEmail(req.user.email, orderShortId, razorpay_payment_id, finalTotal);
+      emailService.sendOrderConfirmationEmail(req.user.email, orderShortId, finalTotal, validatedItems);
+    }
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@zuxofit.com';
+    emailService.sendAdminOrderNotificationEmail(adminEmail, orderShortId, req.user.name || 'Customer', finalTotal);
 
+    // 12. Notification Center Integration
+    try {
       await notificationService.createCustomerNotification({
         recipient: userId,
         type: 'PAYMENT_SUCCESS',
@@ -428,34 +504,8 @@ const verifyPayment = async (req, res, next) => {
         metadata: { orderId: order._id, total: finalTotal },
         referenceId: `NEW_ORDER_${order._id}`
       });
-
-      // Stock Alerts Check
-      for (const item of validatedItems) {
-        const p = await Product.findById(item.product);
-        if (p) {
-          if (p.stock === 0) {
-            await notificationService.createAdminNotification({
-              type: 'OUT_OF_STOCK',
-              title: 'Out of Stock Alert',
-              message: `Product "${p.name}" is now out of stock.`,
-              relatedResourceType: 'PRODUCT',
-              relatedResourceId: String(p._id),
-              referenceId: `OUT_OF_STOCK_${p._id}_0`
-            });
-          } else if (p.stock <= 5) {
-            await notificationService.createAdminNotification({
-              type: 'LOW_STOCK',
-              title: 'Low Stock Alert',
-              message: `Product "${p.name}" is low in stock (${p.stock} remaining).`,
-              relatedResourceType: 'PRODUCT',
-              relatedResourceId: String(p._id),
-              referenceId: `LOW_STOCK_${p._id}_${p.stock}`
-            });
-          }
-        }
-      }
     } catch (notifErr) {
-      console.warn('Payment notification trigger notice:', notifErr.message);
+      console.warn('Payment notification error notice:', notifErr.message);
     }
 
     res.json({
@@ -465,7 +515,6 @@ const verifyPayment = async (req, res, next) => {
     });
   } catch (error) {
     if (error.code === 11000) {
-      // Idempotency catch for duplicate razorpayPaymentId index collision
       const existingOrder = await Order.findOne({
         'payment.razorpayPaymentId': req.body.razorpay_payment_id
       })
@@ -484,7 +533,93 @@ const verifyPayment = async (req, res, next) => {
   }
 };
 
+// @desc    Handle Razorpay Webhook Events (Idempotent signature validation)
+// @route   POST /api/payment/webhook
+// @access  Public (Signature-verified)
+const handleRazorpayWebhook = async (req, res) => {
+  try {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+    if (isProduction && (!webhookSecret || webhookSecret === 'solevibe_webhook_secret_dev_key')) {
+      console.error('[Security] Production webhook rejected: missing or placeholder RAZORPAY_WEBHOOK_SECRET');
+      return res.status(500).json({ status: 'error', message: 'Webhook configuration error' });
+    }
+
+    const activeWebhookSecret = webhookSecret || 'solevibe_webhook_secret_dev_key';
+    const receivedSignature = req.headers['x-razorpay-signature'];
+    const eventId = req.headers['x-razorpay-event-id'];
+
+    if (!receivedSignature) {
+      return res.status(400).json({ status: 'error', message: 'Missing webhook signature header' });
+    }
+
+    // Verify webhook HMAC SHA256 signature
+    const bodyStr = JSON.stringify(req.body);
+    const expectedSignature = crypto
+      .createHmac('sha256', activeWebhookSecret)
+      .update(bodyStr)
+      .digest('hex');
+
+    if (receivedSignature !== expectedSignature) {
+      console.warn('⚠️ Webhook signature mismatch rejected');
+      return res.status(400).json({ status: 'error', message: 'Invalid webhook signature' });
+    }
+
+    // Idempotency check: prevent duplicate event processing
+    if (eventId) {
+      const existingTxn = await PaymentTransaction.findOne({ webhookEventId: eventId });
+      if (existingTxn) {
+        return res.status(200).json({ status: 'ok', message: 'Duplicate webhook event already processed' });
+      }
+    }
+
+    const event = req.body.event;
+    const payload = req.body.payload;
+
+    console.log(`⚡ [RAZORPAY WEBHOOK] Event: ${event} | ID: ${eventId || 'N/A'}`);
+
+    if (event === 'payment.captured' && payload.payment) {
+      const paymentEntity = payload.payment.entity;
+      await PaymentTransaction.findOneAndUpdate(
+        { razorpayOrderId: paymentEntity.order_id },
+        {
+          razorpayPaymentId: paymentEntity.id,
+          amount: paymentEntity.amount / 100,
+          currency: paymentEntity.currency,
+          status: 'CAPTURED',
+          paymentMethod: paymentEntity.method,
+          webhookEvent: event,
+          webhookEventId: eventId
+        },
+        { upsert: true }
+      );
+    } else if (event === 'payment.failed' && payload.payment) {
+      const paymentEntity = payload.payment.entity;
+      await PaymentTransaction.findOneAndUpdate(
+        { razorpayOrderId: paymentEntity.order_id },
+        {
+          razorpayPaymentId: paymentEntity.id,
+          amount: paymentEntity.amount / 100,
+          status: 'FAILED',
+          failureReason: paymentEntity.error_description || 'Payment failed',
+          errorCode: paymentEntity.error_code,
+          webhookEvent: event,
+          webhookEventId: eventId
+        },
+        { upsert: true }
+      );
+    }
+
+    res.status(200).json({ status: 'ok', event });
+  } catch (error) {
+    console.error('Webhook handler error:', error.message);
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+};
+
 module.exports = {
   createPaymentOrder,
-  verifyPayment
+  verifyPayment,
+  handleRazorpayWebhook
 };

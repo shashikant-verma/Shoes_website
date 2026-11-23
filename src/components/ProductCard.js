@@ -1,109 +1,204 @@
-import React from 'react';
+import React, { useState } from 'react';
+import './ProductCard.css';
 
-function ProductCard({ product, onProductClick, index = 0, isInWishlist = false, onToggleWishlist, onQuickView }) {
+function ProductCard({ 
+  product, 
+  onProductClick, 
+  index = 0, 
+  isInWishlist = false, 
+  onToggleWishlist, 
+  onQuickView,
+  onAddToCart
+}) {
+  const [isHovered, setIsHovered] = useState(false);
+  const [selectedQuickSize, setSelectedQuickSize] = useState(null);
+
+  if (!product) return null;
+
   const rating = Number(product.rating) || 0;
-  const reviewCount = Number(product.reviews ?? product.reviewCount) || 0;
-  const badge = product.badge || (product.stock === 0 ? 'SOLD OUT' : 'NEW');
+  const reviewCount = Number(product.reviewCount ?? product.reviews) || 0;
+  const isOutOfStock = product.stock === 0;
+
+  // Determine badge
+  let badgeText = null;
+  let badgeType = 'default';
+
+  if (isOutOfStock) {
+    badgeText = 'SOLD OUT';
+    badgeType = 'soldout';
+  } else if (product.discount && product.discount > 0 && product.originalPrice && product.originalPrice > product.price) {
+    badgeText = `-${product.discount}%`;
+    badgeType = 'sale';
+  } else if (product.isNew) {
+    badgeText = 'NEW';
+    badgeType = 'new';
+  } else if (product.badge) {
+    badgeText = product.badge;
+    badgeType = 'featured';
+  }
+
+  // Gallery image fallback for secondary hover preview if available
+  const primaryImage = product.image;
+  const secondaryImage = (product.images && product.images.length > 1 && product.images[1] !== product.image)
+    ? product.images[1]
+    : null;
+
+  const displayImage = (isHovered && secondaryImage) ? secondaryImage : primaryImage;
+
+  const handleCardClick = () => {
+    if (onProductClick) {
+      onProductClick(product);
+    }
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleCardClick();
+    }
+  };
+
+  const handleQuickAdd = (size, e) => {
+    e.stopPropagation();
+    setSelectedQuickSize(size);
+    if (onAddToCart) {
+      onAddToCart({
+        ...product,
+        size,
+        quantity: 1
+      });
+    }
+  };
 
   return (
     <article
-      className="product-card glass-panel fade-in-up"
-      style={{ animationDelay: `${index * 0.1}s` }}
-      onClick={() => onProductClick(product)}
+      className={`product-card ${isOutOfStock ? 'is-out-of-stock' : ''}`}
+      onClick={handleCardClick}
+      onKeyDown={handleKeyDown}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => { setIsHovered(false); setSelectedQuickSize(null); }}
       tabIndex="0"
       role="button"
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onProductClick(product);
-        }
-      }}
-      aria-label={`View ${product.name}`}
+      aria-label={`View ${product.name}, price ₹${Number(product.price || 0).toLocaleString()}`}
     >
-      <div className={`product-badge badge-${product.badgeColor || 'primary'}`}>
-        <span className="telemetry-label">{badge}</span>
-      </div>
+      {/* Visual Badge */}
+      {badgeText && (
+        <div className={`card-badge badge-${badgeType}`}>
+          <span>{badgeText}</span>
+        </div>
+      )}
 
-      {/* Wishlist Button */}
+      {/* Floating Wishlist Button */}
       <button 
-        className={`wishlist-btn-card ${isInWishlist ? 'active' : ''}`} 
-        title="Add to Wishlist"
-        onClick={(e) => onToggleWishlist && onToggleWishlist(product, e)}
-        style={{ 
-          position: 'absolute', 
-          top: '10px', 
-          right: '10px', 
-          zIndex: 10,
-          background: 'rgba(255,255,255,0.8)',
-          border: 'none',
-          borderRadius: '50%',
-          width: '36px',
-          height: '36px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          color: isInWishlist ? '#e74c3c' : '#333',
-          fontSize: '20px',
-          boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+        type="button"
+        className={`card-wishlist-btn ${isInWishlist ? 'active' : ''}`} 
+        title={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
+        aria-label={isInWishlist ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (onToggleWishlist) onToggleWishlist(product, e);
         }}
-        aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
       >
-        {isInWishlist ? '♥' : '♡'}
+        <span className="heart-icon" aria-hidden="true">
+          {isInWishlist ? '♥' : '♡'}
+        </span>
       </button>
 
-      <div className="product-image-container">
+      {/* 4:5 Aspect Ratio Product Image Container */}
+      <div className="card-image-wrap">
         <img
-          src={product.image}
+          src={displayImage}
           alt={product.name}
-          className="product-image"
+          className="card-image"
           loading="lazy"
+          decoding="async"
+          onError={(e) => {
+            // Fallback gracefully to primary if secondary fails
+            if (e.target.src !== primaryImage) {
+              e.target.src = primaryImage;
+            }
+          }}
         />
-        <div className="product-overlay">
-          <span 
-            className="quick-view-btn"
-            onClick={(e) => {
-              if (onQuickView) {
+
+        {/* Floating Quick View Overlay */}
+        <div className="card-overlay">
+          {onQuickView && (
+            <button
+              type="button"
+              className="card-quick-view-btn"
+              onClick={(e) => {
                 e.stopPropagation();
                 onQuickView(product);
-              }
-            }}
-          >
-            Quick View
-          </span>
+              }}
+              aria-label={`Quick view ${product.name}`}
+            >
+              <span>QUICK VIEW</span>
+            </button>
+          )}
+
+          {/* Quick Size Bar on Hover (when in stock and sizes exist) */}
+          {!isOutOfStock && product.sizes && product.sizes.length > 0 && onAddToCart && (
+            <div className="quick-size-bar" onClick={(e) => e.stopPropagation()}>
+              <span className="quick-size-label">QUICK ADD:</span>
+              <div className="quick-size-list">
+                {product.sizes.slice(0, 6).map((sz) => (
+                  <button
+                    key={sz}
+                    type="button"
+                    className={`quick-size-btn ${selectedQuickSize === sz ? 'added' : ''}`}
+                    onClick={(e) => handleQuickAdd(sz, e)}
+                    title={`Add size ${sz} to cart`}
+                  >
+                    {sz.replace(/UK\s*/i, '')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="product-info">
-        <span className="product-category">{product.category?.toUpperCase()}</span>
-        <h3 className="product-name headline-md">{product.name}</h3>
-        <p className="product-description">
-          {product.description || 'Thoughtfully designed footwear for everyday movement and style.'}
-        </p>
-
-        <div className="product-rating" aria-label={`${rating} out of 5 stars, ${reviewCount} reviews`}>
-          <span className="rating-stars" aria-hidden="true">
-            {'★'.repeat(Math.floor(rating))}{'☆'.repeat(Math.max(0, 5 - Math.floor(rating)))}
+      {/* Product Information */}
+      <div className="card-info">
+        <div className="card-category-row">
+          <span className="card-category">
+            {product.productType || product.category?.toUpperCase() || 'FOOTWEAR'}
           </span>
-          <span className="rating-value telemetry-label">{reviewCount} reviews</span>
+          {product.specifications?.drop && (
+            <span className="card-drop-tag">
+              {product.specifications.drop} DROP
+            </span>
+          )}
         </div>
 
-        <div className="product-footer">
-          <div className="product-price">
-            <span className="telemetry-metric price-amount">₹{Number(product.price || 0).toLocaleString()}</span>
-            {product.originalPrice && (
-              <span className="original-price">₹{Number(product.originalPrice).toLocaleString()}</span>
-            )}
-            <span className="telemetry-label stock-info">
-              {product.stock > 0 ? `${product.stock} IN STOCK` : 'SOLD OUT'}
+        <h3 className="card-title" title={product.name}>
+          {product.name}
+        </h3>
+
+        {/* Rating Row */}
+        <div className="card-rating-row" aria-label={`${rating} out of 5 stars with ${reviewCount} reviews`}>
+          <span className="rating-stars" aria-hidden="true">
+            {'★'.repeat(Math.round(rating))}{'☆'.repeat(Math.max(0, 5 - Math.round(rating)))}
+          </span>
+          <span className="rating-score">{rating > 0 ? rating.toFixed(1) : ''}</span>
+          <span className="review-count">({reviewCount})</span>
+        </div>
+
+        {/* Price & Stock Row */}
+        <div className="card-price-row">
+          <div className="card-prices">
+            <span className="price-current">
+              ₹{Number(product.price || 0).toLocaleString()}
             </span>
+            {product.originalPrice && product.originalPrice > product.price && (
+              <span className="price-original">
+                ₹{Number(product.originalPrice).toLocaleString()}
+              </span>
+            )}
           </div>
 
-          <span
-            className="btn-view-details"
-          >
-            <span className="telemetry-label">VIEW</span>
-            <span className="btn-icon" aria-hidden="true">→</span>
+          <span className={`stock-status ${isOutOfStock ? 'stock-out' : 'stock-in'}`}>
+            {isOutOfStock ? 'SOLD OUT' : 'IN STOCK'}
           </span>
         </div>
       </div>

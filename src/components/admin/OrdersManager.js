@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './OrdersManager.css';
 import orderService from '../../services/orderService';
 
@@ -12,6 +12,15 @@ const StatusIcon = ({ status }) => {
     cancelled: '❌'
   };
   return <span>{icons[status] || '📦'}</span>;
+};
+
+const ALLOWED_TRANSITIONS = {
+  confirmed: ['processing', 'cancelled'],
+  processing: ['shipped', 'cancelled'],
+  shipped: ['out_for_delivery', 'delivered'],
+  out_for_delivery: ['delivered', 'cancelled'],
+  delivered: [],
+  cancelled: []
 };
 
 function OrdersManager() {
@@ -36,21 +45,7 @@ function OrdersManager() {
 
   const ORDERS_PER_PAGE = 10;
 
-  useEffect(() => {
-    loadOrders();
-  }, [currentPage, statusFilter]);
-
-  useEffect(() => {
-    if (selectedOrder) {
-      setNewStatusSelect(selectedOrder.status || 'confirmed');
-      setTrackingNumber(selectedOrder.trackingNumber || '');
-      setCarrier(selectedOrder.carrier || '');
-      setEstimatedDeliveryDate(selectedOrder.estimatedDeliveryDate ? new Date(selectedOrder.estimatedDeliveryDate).toISOString().split('T')[0] : '');
-      setStatusNote('');
-    }
-  }, [selectedOrder]);
-
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     setLoading(true);
     try {
       const filters = { page: currentPage, limit: ORDERS_PER_PAGE };
@@ -72,7 +67,23 @@ function OrdersManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, statusFilter]);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
+
+  useEffect(() => {
+    if (selectedOrder) {
+      const current = selectedOrder.status || 'confirmed';
+      const allowed = ALLOWED_TRANSITIONS[current] || [];
+      setNewStatusSelect(allowed.length > 0 ? allowed[0] : current);
+      setTrackingNumber(selectedOrder.trackingNumber || '');
+      setCarrier(selectedOrder.carrier || '');
+      setEstimatedDeliveryDate(selectedOrder.estimatedDeliveryDate ? new Date(selectedOrder.estimatedDeliveryDate).toISOString().split('T')[0] : '');
+      setStatusNote('');
+    }
+  }, [selectedOrder]);
 
   const handleStatusUpdateSubmit = async (orderId, targetStatusOverride) => {
     const targetStatus = targetStatusOverride || newStatusSelect || selectedOrder?.status;
@@ -360,15 +371,28 @@ function OrdersManager() {
                 <h3>Update Order Status & Shipment Tracking</h3>
                 <div className="om-form-group">
                   <label>Select Target Status:</label>
-                  <select
-                    className="om-input-select"
-                    value={newStatusSelect}
-                    onChange={e => setNewStatusSelect(e.target.value)}
-                  >
-                    {statusOptions.map(s => (
-                      <option key={s} value={s}>{s.replace(/_/g, ' ').toUpperCase()}</option>
-                    ))}
-                  </select>
+                  {(() => {
+                    const current = selectedOrder.status || 'confirmed';
+                    const allowed = ALLOWED_TRANSITIONS[current] || [];
+                    if (allowed.length === 0) {
+                      return (
+                        <p className="om-status-final-notice" style={{ color: '#10B981', fontWeight: 600, fontSize: '0.88rem' }}>
+                          ✓ This order has reached its final state (<strong>{current.toUpperCase()}</strong>).
+                        </p>
+                      );
+                    }
+                    return (
+                      <select
+                        className="om-input-select"
+                        value={newStatusSelect}
+                        onChange={e => setNewStatusSelect(e.target.value)}
+                      >
+                        {allowed.map(s => (
+                          <option key={s} value={s}>{s.replace(/_/g, ' ').toUpperCase()}</option>
+                        ))}
+                      </select>
+                    );
+                  })()}
                 </div>
 
                 <div className="om-form-grid">

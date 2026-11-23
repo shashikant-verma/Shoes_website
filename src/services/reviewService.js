@@ -13,6 +13,21 @@ const getAuthHeaders = () => {
 };
 
 const reviewService = {
+  // Public: Get approved reviews across all products for storefront showcase
+  getApprovedReviews: async (limit = 6) => {
+    try {
+      const response = await axios.get(`${API_URL}/reviews?limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching approved reviews:', error);
+      return {
+        success: false,
+        count: 0,
+        data: []
+      };
+    }
+  },
+
   // Public: Get approved reviews and summary for a product
   getProductReviews: async (productId) => {
     try {

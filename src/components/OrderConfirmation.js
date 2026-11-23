@@ -7,9 +7,16 @@ function OrderConfirmation({ order, onContinueShopping, onViewOrders }) {
       <div className="order-confirmation-page">
         <div className="order-confirmation-container">
           <div className="confirmation-error">
-            <div className="error-icon">❌</div>
+            <div className="error-icon">👟</div>
             <h2>Order Not Found</h2>
-            <p>We couldn't find your order details.</p>
+            <p>We couldn't find your order details. Please check your account order history.</p>
+            <button 
+              type="button" 
+              className="btn-primary" 
+              onClick={onContinueShopping}
+            >
+              Back to SoleVibe
+            </button>
           </div>
         </div>
       </div>
@@ -26,6 +33,23 @@ function OrderConfirmation({ order, onContinueShopping, onViewOrders }) {
     });
   };
 
+  const deliveryDateDisplay = order.estimatedDeliveryDate 
+    ? new Date(order.estimatedDeliveryDate).toLocaleDateString('en-IN', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    : new Date(Date.now() + (5 * 24 * 60 * 60 * 1000)).toLocaleDateString('en-IN', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+  const orderNum = order.orderNumber || order._id || order.id;
+  const items = Array.isArray(order.items) ? order.items : [];
+
   return (
     <div className="order-confirmation-page">
       <div className="order-confirmation-container">
@@ -36,8 +60,11 @@ function OrderConfirmation({ order, onContinueShopping, onViewOrders }) {
               <div className="checkmark">✓</div>
             </div>
           </div>
-          <h1 className="headline-xl">Order Placed Successfully!</h1>
-          <p className="body-lg">Thank you for choosing SoleVibe. Your order is being processed.</p>
+          <span className="confirmation-eyebrow">ORDER CONFIRMED & DISPATCH PREPARED</span>
+          <h1 className="headline-xl">Thank You for Choosing SoleVibe</h1>
+          <p className="body-lg">
+            Your footwear order has been verified and registered. You will receive real-time updates as your pair moves through our fulfillment center.
+          </p>
         </div>
 
         {/* Order Details Card */}
@@ -45,31 +72,31 @@ function OrderConfirmation({ order, onContinueShopping, onViewOrders }) {
           <div className="order-details-header">
             <div className="telemetry-badge">
               <span className="status-dot pulse-glow"></span>
-              <span className="telemetry-label">ORDER CONFIRMATION</span>
+              <span className="telemetry-label">VERIFIED TRANSACTION</span>
             </div>
             <div className="order-meta">
-              <h2 className="headline-lg">Order #{order.id}</h2>
-              <p className="body-md">Placed on {formatDate(order.createdAt)}</p>
+              <h2 className="headline-lg">Order #{orderNum}</h2>
+              <p className="order-date-text">Placed on {formatDate(order.createdAt || new Date())}</p>
             </div>
           </div>
 
           {/* Order Items */}
           <div className="confirmed-items">
-            <h3 className="headline-md">Items Ordered ({order.items.length})</h3>
+            <h3 className="section-title">FOOTWEAR ITEMS ({items.reduce((s, i) => s + (i.quantity || 1), 0)})</h3>
             <div className="items-list">
-              {order.items.map((item, index) => (
+              {items.map((item, index) => (
                 <div key={index} className="confirmed-item">
                   <div className="item-image">
                     <img src={item.image} alt={item.name} />
                   </div>
                   <div className="item-details">
-                    <h4 className="body-lg">{item.name}</h4>
+                    <h4 className="item-name">{item.name}</h4>
                     <div className="item-meta">
-                      <span className="telemetry-label">SIZE: US {item.size}</span>
-                      <span className="telemetry-label">QTY: {item.quantity}</span>
+                      <span className="meta-pill">SIZE: UK {item.size}</span>
+                      <span className="meta-pill">QTY: {item.quantity}</span>
                     </div>
                     <div className="item-price">
-                      <span className="telemetry-metric">₹{(item.price * item.quantity).toLocaleString()}</span>
+                      <span className="price-val">₹{((item.price || 0) * (item.quantity || 1)).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
@@ -77,108 +104,124 @@ function OrderConfirmation({ order, onContinueShopping, onViewOrders }) {
             </div>
           </div>
 
-          {/* Order Summary */}
+          {/* Delivery & Address Snapshot */}
+          {order.shippingAddress && (
+            <div className="address-snapshot-section">
+              <h3 className="section-title">DISPATCH DESTINATION</h3>
+              <div className="address-snapshot-card">
+                <div className="address-snapshot-header">
+                  <strong>{order.shippingAddress.fullName}</strong>
+                  <span className="type-badge">{order.shippingAddress.type || 'HOME'}</span>
+                </div>
+                <p className="address-snapshot-text">
+                  {order.shippingAddress.street || order.shippingAddress.addressLine1}
+                  {order.shippingAddress.landmark ? `, Near ${order.shippingAddress.landmark}` : ''}
+                </p>
+                <p className="address-snapshot-city">
+                  {order.shippingAddress.city}, {order.shippingAddress.state} - <strong>{order.shippingAddress.pincode || order.shippingAddress.postalCode}</strong>
+                </p>
+                <p className="address-snapshot-contact">📞 +91 {order.shippingAddress.phone}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Shipping & Delivery Timeline */}
+          <div className="shipping-info-section">
+            <h3 className="section-title">DELIVERY STATUS & ESTIMATE</h3>
+            <div className="delivery-details">
+              <div className="estimated-delivery-box">
+                <div className="delivery-icon-wrap">🚚</div>
+                <div className="delivery-text-wrap">
+                  <span className="est-label">Estimated Delivery Date</span>
+                  <span className="est-date">{deliveryDateDisplay}</span>
+                  <span className="est-method">
+                    Carrier: {order.shippingMethodName || (order.shippingMethod === 'express' ? 'Express Courier' : 'Standard Delivery')} ({order.estimatedDeliveryRange || '3-5 business days'})
+                  </span>
+                </div>
+              </div>
+
+              <div className="delivery-timeline">
+                <div className="timeline-item active">
+                  <div className="timeline-dot"></div>
+                  <div className="timeline-content">
+                    <h4>Order Confirmed</h4>
+                    <p>{formatDate(order.createdAt || new Date())}</p>
+                  </div>
+                </div>
+                <div className="timeline-item">
+                  <div className="timeline-dot"></div>
+                  <div className="timeline-content">
+                    <h4>Fulfillment & Quality Check</h4>
+                    <p>1 business day</p>
+                  </div>
+                </div>
+                <div className="timeline-item">
+                  <div className="timeline-dot"></div>
+                  <div className="timeline-content">
+                    <h4>In Transit</h4>
+                    <p>Tracking number will be assigned</p>
+                  </div>
+                </div>
+                <div className="timeline-item">
+                  <div className="timeline-dot"></div>
+                  <div className="timeline-content">
+                    <h4>Delivered</h4>
+                    <p>{deliveryDateDisplay}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Order Summary & Financials */}
           <div className="order-summary-section">
-            <h3 className="headline-md">Order Summary</h3>
+            <h3 className="section-title">FINANCIAL SUMMARY</h3>
             <div className="summary-details">
               <div className="summary-row">
-                <span className="body-md">Subtotal ({order.items.reduce((sum, item) => sum + item.quantity, 0)} items):</span>
-                <span className="body-md">₹{order.subtotal.toLocaleString()}</span>
+                <span className="summary-label">Items Subtotal:</span>
+                <span className="summary-val">₹{(order.subtotal || 0).toLocaleString()}</span>
               </div>
               
               {order.discount > 0 && (
                 <div className="summary-row discount-row">
-                  <span className="body-md">Discount {order.promoCode && `(${order.promoCode})`}:</span>
-                  <span className="body-md discount-amount">-₹{order.discount.toLocaleString()}</span>
+                  <span className="summary-label">Coupon Discount {order.promoCode && `(${order.promoCode})`}:</span>
+                  <span className="summary-val discount-val">-₹{order.discount.toLocaleString()}</span>
                 </div>
               )}
               
               <div className="summary-row">
-                <span className="body-md">Shipping & Handling:</span>
-                <span className="body-md">{order.shipping === 0 ? 'FREE' : `₹${order.shipping.toLocaleString()}`}</span>
+                <span className="summary-label">Shipping & Handling:</span>
+                <span className="summary-val">{order.shipping === 0 ? 'FREE' : `₹${(order.shipping || 0).toLocaleString()}`}</span>
               </div>
               
               <div className="summary-divider"></div>
               
               <div className="summary-row summary-total">
-                <span className="headline-md">Total Paid:</span>
-                <span className="total-amount">₹{order.total.toLocaleString()}</span>
+                <span className="total-label">Total Amount Paid:</span>
+                <span className="total-val">₹{(order.total || 0).toLocaleString()}</span>
               </div>
+              <span className="tax-inclusive-tag">All taxes included (18% GST)</span>
             </div>
           </div>
 
-          {/* Shipping Information */}
-          <div className="shipping-info-section">
-            <h3 className="headline-md">Delivery Information</h3>
-            <div className="delivery-details">
-              <div className="delivery-timeline">
-                <div className="timeline-item active">
-                  <div className="timeline-dot"></div>
-                  <div className="timeline-content">
-                    <h4 className="body-lg">Order Confirmed</h4>
-                    <p className="telemetry-label">{formatDate(order.createdAt)}</p>
-                  </div>
-                </div>
-                <div className="timeline-item">
-                  <div className="timeline-dot"></div>
-                  <div className="timeline-content">
-                    <h4 className="body-lg">Processing</h4>
-                    <p className="telemetry-label">1-2 business days</p>
-                  </div>
-                </div>
-                <div className="timeline-item">
-                  <div className="timeline-dot"></div>
-                  <div className="timeline-content">
-                    <h4 className="body-lg">Shipped</h4>
-                    <p className="telemetry-label">3-5 business days</p>
-                  </div>
-                </div>
-                <div className="timeline-item">
-                  <div className="timeline-dot"></div>
-                  <div className="timeline-content">
-                    <h4 className="body-lg">Delivered</h4>
-                    <p className="telemetry-label">5-7 business days</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="estimated-delivery">
-                <div className="delivery-badge">
-                  <span className="delivery-icon">🚚</span>
-                  <div className="delivery-text">
-                    <p className="body-lg">Estimated Delivery</p>
-                    <p className="telemetry-metric">
-                      {new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)).toLocaleDateString('en-IN', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Next Steps */}
+          {/* Next Steps / Guarantees */}
           <div className="next-steps-section">
-            <h3 className="headline-md">What's Next?</h3>
+            <h3 className="section-title">THE SOLEVIBE COMMITMENT</h3>
             <div className="next-steps-grid">
               <div className="step-card">
                 <div className="step-icon">📧</div>
-                <h4 className="body-lg">Order Confirmation Email</h4>
-                <p className="body-sm">Check your inbox for order details and tracking information.</p>
+                <h4>Instant Confirmation</h4>
+                <p>Order receipt and itemized invoice dispatched to your email address.</p>
               </div>
               <div className="step-card">
-                <div className="step-icon">📦</div>
-                <h4 className="body-lg">Order Processing</h4>
-                <p className="body-sm">We'll prepare your items and send shipping updates.</p>
+                <div className="step-icon">↩️</div>
+                <h4>7-Day Return Policy</h4>
+                <p>Hassle-free 7-day returns on unworn shoes in original packaging.</p>
               </div>
               <div className="step-card">
-                <div className="step-icon">🚚</div>
-                <h4 className="body-lg">Track Your Order</h4>
-                <p className="body-sm">Monitor your order status and delivery progress.</p>
+                <div className="step-icon">⚡</div>
+                <h4>Athlete Support</h4>
+                <p>SoleVibe specialists are available for sizing, fit, and order queries.</p>
               </div>
             </div>
           </div>
@@ -187,33 +230,21 @@ function OrderConfirmation({ order, onContinueShopping, onViewOrders }) {
         {/* Action Buttons */}
         <div className="confirmation-actions">
           <button 
-            className="btn btn-primary btn-lg"
+            type="button"
+            className="btn-primary btn-view-orders"
             onClick={onViewOrders}
           >
-            <span className="telemetry-label">VIEW ORDER HISTORY</span>
+            <span>VIEW IN ORDER HISTORY</span>
+            <span className="btn-icon">📦</span>
           </button>
           <button 
-            className="btn btn-secondary btn-lg"
+            type="button"
+            className="btn-secondary btn-continue-shop"
             onClick={onContinueShopping}
           >
-            <span className="telemetry-label">CONTINUE SHOPPING</span>
+            <span>CONTINUE SHOPPING</span>
+            <span className="btn-icon">→</span>
           </button>
-        </div>
-
-        {/* Support Section */}
-        <div className="support-section">
-          <h3 className="headline-md">Need Help?</h3>
-          <p className="body-md">
-            Have questions about your order? Contact our customer support team.
-          </p>
-          <div className="support-actions">
-            <button className="btn btn-outline">
-              <span className="telemetry-label">CONTACT SUPPORT</span>
-            </button>
-            <button className="btn btn-outline">
-              <span className="telemetry-label">ORDER HELP</span>
-            </button>
-          </div>
         </div>
       </div>
     </div>

@@ -20,6 +20,7 @@ router.route('/:id')
   .delete(deleteAddress);
 
 router.route('/:id/default')
-  .put(setDefaultAddress);
+  .put(setDefaultAddress)
+  .patch(setDefaultAddress);
 
 module.exports = router;

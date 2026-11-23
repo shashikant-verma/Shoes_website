@@ -5,10 +5,25 @@ const { createCustomerNotification } = require('./notificationService');
 
 const ABANDONED_CART_HOURS = Number(process.env.ABANDONED_CART_HOURS) || 24;
 
+let isScanning = false;
+let lastScanTimestamp = null;
+
 /**
  * Scan MongoDB for eligible abandoned carts and create notifications.
+ * Uses concurrency lock to prevent overlapping executions.
  */
 const checkAbandonedCarts = async () => {
+  if (isScanning) {
+    return {
+      success: false,
+      skipped: true,
+      reason: 'Scan already in progress'
+    };
+  }
+
+  isScanning = true;
+  lastScanTimestamp = new Date();
+
   try {
     const thresholdDate = new Date(Date.now() - ABANDONED_CART_HOURS * 60 * 60 * 1000);
 
@@ -79,10 +94,18 @@ const checkAbandonedCarts = async () => {
       success: false,
       error: error.message
     };
+  } finally {
+    isScanning = false;
   }
 };
 
 let schedulerIntervalId = null;
+
+const getSchedulerStatus = () => ({
+  isScanning,
+  lastScanTimestamp,
+  isRunning: Boolean(schedulerIntervalId)
+});
 
 /**
  * Start lightweight background scheduler for abandoned cart check.
@@ -114,5 +137,6 @@ module.exports = {
   checkAbandonedCarts,
   startAbandonedCartScheduler,
   stopAbandonedCartScheduler,
+  getSchedulerStatus,
   ABANDONED_CART_HOURS
 };

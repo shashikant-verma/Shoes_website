@@ -12,10 +12,13 @@ import Cart from './components/Cart';
 import Wishlist from './components/Wishlist';
 import OrderHistory from './components/OrderHistory';
 import OrderConfirmation from './components/OrderConfirmation';
+import AddressBook from './components/AddressBook';
+import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
 import Toast from './components/Toast';
 import ConnectionStatus from './components/ConnectionStatus';
 import authService from './services/authService';
+import productService from './services/productService';
 import './styles/fashion-overrides.css';
 
 const CustomerAccount = lazy(() => import('./components/CustomerAccount'));
@@ -29,6 +32,7 @@ function App() {
   const [cart, setCart] = useState([]);
   const [currentPage, setCurrentPage] = useState('home');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [wishlist, setWishlist] = useState([]);
@@ -39,7 +43,7 @@ function App() {
   useEffect(() => {
     const handleOpenDetail = (e) => {
       if (e.detail) {
-        setSelectedProduct(e.detail);
+        handleProductClick(e.detail);
       }
     };
     window.addEventListener('openProductDetail', handleOpenDetail);
@@ -55,9 +59,73 @@ function App() {
   });
 
   useEffect(() => {
+    const handlePopState = async () => {
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const productParam = searchParams.get('product') || (searchParams.get('page') === 'product' ? searchParams.get('id') : null);
+        
+        if (productParam) {
+          const res = await productService.getProduct(productParam);
+          if (res && res.success && res.data) {
+            setSelectedProduct(res.data);
+          }
+        } else {
+          setSelectedProduct(null);
+        }
+
+        const pageParam = searchParams.get('page') || 'home';
+        const searchParam = searchParams.get('search') || '';
+        setCurrentPage(pageParam);
+        if (searchParam) {
+          setSearchQuery(searchParam);
+        }
+        if (['men', 'women', 'running', 'training', 'trail', 'racing', 'ozark', 'accessories'].includes(pageParam)) {
+          setCategoryFilter(pageParam);
+        } else if (pageParam === 'new-arrivals') {
+          setCategoryFilter('new');
+        } else {
+          setCategoryFilter('all');
+        }
+      } catch {
+        // safe fallback
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
     const initializeApp = async () => {
       const path = window.location.pathname;
       setIsAdminRoute(path === '/admin');
+
+      // Check query parameters for initial page and product restoration on load
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const productParam = searchParams.get('product') || (searchParams.get('page') === 'product' ? searchParams.get('id') : null);
+        if (productParam) {
+          const res = await productService.getProduct(productParam);
+          if (res && res.success && res.data) {
+            setSelectedProduct(res.data);
+          }
+        }
+
+        const pageParam = searchParams.get('page');
+        const searchParam = searchParams.get('search');
+        if (pageParam && ['shop', 'men', 'women', 'running', 'training', 'trail', 'racing', 'ozark', 'accessories', 'sale', 'new-arrivals', 'products'].includes(pageParam)) {
+          setCurrentPage(pageParam);
+          if (['men', 'women', 'running', 'training', 'trail', 'racing', 'ozark', 'accessories'].includes(pageParam)) {
+            setCategoryFilter(pageParam);
+          } else if (pageParam === 'new-arrivals') {
+            setCategoryFilter('new');
+          }
+        }
+        if (searchParam) {
+          setSearchQuery(searchParam);
+        }
+      } catch {
+        // safe fallback
+      }
 
       // Check if user is already authenticated
       if (authService.isAuthenticated()) {
@@ -78,7 +146,11 @@ function App() {
         } else {
           // Token expired or invalid
           authService.clearAuth();
+          loadUserData('guest', false);
         }
+      } else {
+        // Guest user initialization
+        loadUserData('guest', false);
       }
       setLoading(false);
     };
@@ -232,10 +304,31 @@ function App() {
       setWishlist(guestWishlist.length > 0 ? guestWishlist : legacyWishlist);
     }
 
-    // Load orders from localStorage
-    const savedOrders = localStorage.getItem(`orders-${userId}`);
-    if (savedOrders) {
-      try { setOrders(JSON.parse(savedOrders)); } catch { /* ignore */ }
+    // Load orders from MongoDB for authenticated customer
+    if (isAuthenticatedUser) {
+      try {
+        const orderService = require('./services/orderService').default;
+        const ordersResult = await orderService.getOrders();
+        if (ordersResult.success && ordersResult.data) {
+          const fetchedOrders = ordersResult.data.data || ordersResult.data;
+          const orderArray = Array.isArray(fetchedOrders) ? fetchedOrders : [];
+          setOrders(orderArray);
+          localStorage.setItem(`orders-${userId}`, JSON.stringify(orderArray));
+        } else {
+          const savedOrders = localStorage.getItem(`orders-${userId}`);
+          if (savedOrders) {
+            try { setOrders(JSON.parse(savedOrders)); } catch { /* ignore */ }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load orders from MongoDB:', error);
+        const savedOrders = localStorage.getItem(`orders-${userId}`);
+        if (savedOrders) {
+          try { setOrders(JSON.parse(savedOrders)); } catch { /* ignore */ }
+        }
+      }
+    } else {
+      setOrders([]);
     }
   };
 
@@ -255,15 +348,16 @@ function App() {
     setIsAuthenticated(false);
     setUserType(null);
     setCurrentUser(null);
-    setCart([]);
-    setWishlist([]);
     setOrders([]);
+    // Reload guest cart & wishlist
+    loadUserData('guest', false);
     
     if (isAdminRoute) {
       window.location.pathname = '/admin';
     } else {
-      window.location.pathname = '/';
+      setCurrentPage('home');
     }
+    showToast('Signed out successfully', 'info');
   };
 
   // Toast notification helper
@@ -403,11 +497,31 @@ function App() {
     // Add order to orders list
     const updatedOrders = [order, ...orders];
     setOrders(updatedOrders);
-    localStorage.setItem(`orders-${currentUser.id}`, JSON.stringify(updatedOrders));
+    if (currentUser?.id) {
+      localStorage.setItem(`orders-${currentUser.id}`, JSON.stringify(updatedOrders));
+    }
+
+    // Refresh orders from MongoDB in background
+    if (isAuthenticated && userType === 'user') {
+      try {
+        const orderService = require('./services/orderService').default;
+        const ordersResult = await orderService.getOrders();
+        if (ordersResult.success && ordersResult.data) {
+          const fetchedOrders = ordersResult.data.data || ordersResult.data;
+          if (Array.isArray(fetchedOrders)) {
+            setOrders(fetchedOrders);
+          }
+        }
+      } catch (err) {
+        console.error('Error refreshing orders after checkout:', err);
+      }
+    }
 
     // Clear local cart state and localStorage immediately
     setCart([]);
-    localStorage.removeItem(`cart-${currentUser.id}`);
+    if (currentUser?.id) {
+      localStorage.removeItem(`cart-${currentUser.id}`);
+    }
     localStorage.removeItem('cart-guest');
 
     // FIX 6: Clear MongoDB cart — surface failure visibly, not silently
@@ -439,53 +553,95 @@ function App() {
     setCurrentPage('orders');
   };
 
-  const handlePageChange = (page) => {
+  const handlePageChange = (page, options = {}) => {
+    setSelectedProduct(null);
+    if (options && options.search) {
+      setSearchQuery(options.search);
+    } else if (page !== 'shop') {
+      setSearchQuery('');
+    }
     setCurrentPage(page);
+
+    try {
+      const url = new URL(window.location);
+      url.searchParams.delete('product');
+      if (page === 'home') {
+        url.search = '';
+      } else {
+        url.searchParams.set('page', page);
+        if (options && options.search) {
+          url.searchParams.set('search', options.search);
+        } else {
+          url.searchParams.delete('search');
+        }
+      }
+      window.history.pushState({ page }, '', url.toString());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      // safe fallback
+    }
     if (page === 'men') {
       setCategoryFilter('men');
-      setCurrentPage('men');
     } else if (page === 'women') {
       setCategoryFilter('women');
-      setCurrentPage('women');
     } else if (page === 'sale') {
       setCategoryFilter('all');
-      setCurrentPage('sale');
     } else if (page === 'shop') {
       setCategoryFilter('all');
-      setCurrentPage('shop');
     } else if (page === 'products') {
       setCategoryFilter('all');
-      setCurrentPage('products');
     } else if (page === 'accessories') {
       setCategoryFilter('accessories');
-      setCurrentPage('accessories');
     } else if (page === 'ozark') {
       setCategoryFilter('ozark');
-      setCurrentPage('ozark');
     } else if (page === 'running') {
       setCategoryFilter('running');
-      setCurrentPage('running');
     } else if (page === 'training') {
       setCategoryFilter('training');
-      setCurrentPage('training');
     } else if (page === 'trail') {
       setCategoryFilter('trail');
-      setCurrentPage('trail');
     } else if (page === 'racing') {
       setCategoryFilter('racing');
-      setCurrentPage('racing');
     } else if (page === 'new-arrivals') {
       setCategoryFilter('new');
-      setCurrentPage('new-arrivals');
     }
+  };
+
+  const handleSearch = (query) => {
+    setSelectedProduct(null);
+    setSearchQuery(query);
+    setCategoryFilter('all');
+    setCurrentPage('shop');
   };
 
   const handleProductClick = (product) => {
     setSelectedProduct(product);
+    try {
+      const url = new URL(window.location);
+      const identifier = product.slug || product._id || product.id;
+      if (identifier) {
+        url.searchParams.set('product', identifier);
+      }
+      window.history.pushState({ page: 'product', product: identifier }, '', url.toString());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      // safe fallback
+    }
   };
 
   const handleCloseDetail = () => {
     setSelectedProduct(null);
+    try {
+      const url = new URL(window.location);
+      url.searchParams.delete('product');
+      if (url.searchParams.get('page') === 'product') {
+        url.searchParams.set('page', 'shop');
+        setCurrentPage('shop');
+      }
+      window.history.pushState({ page: currentPage }, '', url.toString());
+    } catch {
+      // safe fallback
+    }
   };
 
   const handleToggleWishlist = (product, e) => {
@@ -513,11 +669,13 @@ function App() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} isAdmin={isAdminRoute} />;
+  // Admin route protection: Require authentication and admin role
+  if (isAdminRoute && (!isAuthenticated || userType !== 'admin')) {
+    return <Login onLogin={handleLogin} isAdmin={true} />;
   }
 
-  if (userType === 'admin') {
+  // Admin user view
+  if (isAuthenticated && userType === 'admin') {
     return <AdminDashboard currentUser={currentUser} onLogout={handleLogout} />;
   }
 
@@ -528,24 +686,47 @@ function App() {
         currentUser={currentUser} 
         userType={userType} 
         onLogout={handleLogout}
-        cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)}
+        cartCount={cart.reduce((sum, item) => sum + (item.quantity || 1), 0)}
         wishlistCount={wishlist.length}
         onPageChange={handlePageChange}
         currentPage={currentPage}
+        onSearch={handleSearch}
       />
       
-      {currentPage === 'home' && <HomePage onPageChange={handlePageChange} />}
+      {selectedProduct ? (
+        <ProductDetail
+          product={selectedProduct}
+          productSlug={selectedProduct.slug || selectedProduct._id || selectedProduct.id}
+          onClose={handleCloseDetail}
+          onAddToCart={handleAddToCart}
+          onAddToWishlist={handleAddToWishlist}
+          isInWishlist={wishlist.some(item => (item.id || item._id) === (selectedProduct.id || selectedProduct._id))}
+          onPageChange={handlePageChange}
+        />
+      ) : (
+        <>
+          {currentPage === 'home' && (
+            <HomePage 
+              onPageChange={handlePageChange}
+              onProductClick={handleProductClick}
+              wishlist={wishlist}
+              onToggleWishlist={handleToggleWishlist}
+              onQuickView={(p) => setQuickViewProduct(p)}
+            />
+          )}
       
       {currentPage === 'shop' && (
         <CollectionPage 
           title="SHOP"
           subtitle="Explore the complete SoleVibe footwear collection, curated for everyday movement and personal style."
           categoryFilter="all"
+          searchQuery={searchQuery}
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
           onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
+          onPageChange={handlePageChange}
         />
       )}
       
@@ -553,10 +734,12 @@ function App() {
         <ProductShowcase 
           onAddToCart={handleAddToCart} 
           categoryFilter={categoryFilter}
+          searchQuery={searchQuery}
           onProductClick={handleProductClick}
           onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
+          onPageChange={handlePageChange}
         />
       )}
 
@@ -565,11 +748,13 @@ function App() {
           title="MEN"
           subtitle="A considered edit of men's footwear for everyday movement and personal style."
           categoryFilter="men"
+          searchQuery={searchQuery}
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
           onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
+          onPageChange={handlePageChange}
         />
       )}
 
@@ -578,11 +763,13 @@ function App() {
           title="WOMEN"
           subtitle="A considered edit of women's footwear for everyday movement and personal style."
           categoryFilter="women"
+          searchQuery={searchQuery}
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
           onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
+          onPageChange={handlePageChange}
         />
       )}
 
@@ -592,11 +779,13 @@ function App() {
           subtitle="Discover considered pairs and seasonal prices in the SoleVibe sale edit."
           categoryFilter="all"
           saleMode={true}
+          searchQuery={searchQuery}
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
           onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
+          onPageChange={handlePageChange}
         />
       )}
 
@@ -605,11 +794,13 @@ function App() {
           title="RUNNING"
           subtitle="Running footwear collection. Engineered for speed, endurance, and peak performance on every run."
           categoryFilter="running"
+          searchQuery={searchQuery}
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
           onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
+          onPageChange={handlePageChange}
         />
       )}
 
@@ -618,11 +809,13 @@ function App() {
           title="TRAINING"
           subtitle="Training footwear collection. Built for versatility, stability, and power across all workout disciplines."
           categoryFilter="training"
+          searchQuery={searchQuery}
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
           onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
+          onPageChange={handlePageChange}
         />
       )}
 
@@ -631,11 +824,13 @@ function App() {
           title="TRAIL"
           subtitle="Trail running collection. Rugged performance footwear designed for off-road adventures and challenging terrain."
           categoryFilter="trail"
+          searchQuery={searchQuery}
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
           onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
+          onPageChange={handlePageChange}
         />
       )}
 
@@ -644,11 +839,13 @@ function App() {
           title="RACING"
           subtitle="Racing footwear collection. Ultra-lightweight performance shoes engineered for competition and personal records."
           categoryFilter="racing"
+          searchQuery={searchQuery}
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
           onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
+          onPageChange={handlePageChange}
         />
       )}
 
@@ -657,11 +854,13 @@ function App() {
           title="NEW ARRIVALS"
           subtitle="Meet the newest additions to the SoleVibe footwear collection."
           categoryFilter="new"
+          searchQuery={searchQuery}
           onAddToCart={handleAddToCart}
           onProductClick={handleProductClick}
           onQuickView={(p) => setQuickViewProduct(p)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
+          onPageChange={handlePageChange}
         />
       )}
       
@@ -673,6 +872,8 @@ function App() {
           currentUser={currentUser}
           showToast={showToast}
           onOrderComplete={handleOrderComplete}
+          onRequireLogin={() => setCurrentPage('login')}
+          onPageChange={handlePageChange}
         />
       )}
 
@@ -694,33 +895,92 @@ function App() {
       )}
 
       {currentPage === 'orders' && (
-        <OrderHistory orders={orders} />
+        isAuthenticated ? (
+          <OrderHistory orders={orders} />
+        ) : (
+          <div className="login-required-container" style={{ textAlign: 'center', padding: '80px 20px', minHeight: '50vh' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📦</div>
+            <h2 style={{ fontSize: '28px', fontWeight: '800', marginBottom: '12px' }}>Track Your Orders</h2>
+            <p style={{ color: 'var(--text-secondary, #666)', marginBottom: '24px', maxWidth: '400px', margin: '0 auto 24px' }}>
+              Please sign in to view your order history and tracking updates.
+            </p>
+            <button 
+              className="btn-primary" 
+              onClick={() => setCurrentPage('login')}
+              style={{ padding: '12px 32px', fontSize: '15px', fontWeight: '700', borderRadius: '8px' }}
+            >
+              Sign In to View Orders
+            </button>
+          </div>
+        )
+      )}
+
+      {currentPage === 'addresses' && (
+        isAuthenticated ? (
+          <div className="page-container" style={{ minHeight: '60vh', padding: '40px 20px', maxWidth: '1200px', margin: '0 auto' }}>
+            <AddressBook showToast={showToast} />
+          </div>
+        ) : (
+          <div className="login-required-container" style={{ textAlign: 'center', padding: '80px 20px', minHeight: '50vh' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📍</div>
+            <h2 style={{ fontSize: '28px', fontWeight: '800', marginBottom: '12px' }}>My Address Book</h2>
+            <p style={{ color: 'var(--text-secondary, #666)', marginBottom: '24px', maxWidth: '400px', margin: '0 auto 24px' }}>
+              Please sign in to manage your saved delivery addresses.
+            </p>
+            <button 
+              className="btn-primary" 
+              onClick={() => setCurrentPage('login')}
+              style={{ padding: '12px 32px', fontSize: '15px', fontWeight: '700', borderRadius: '8px' }}
+            >
+              Sign In to View Addresses
+            </button>
+          </div>
+        )
       )}
 
       {currentPage === 'account' && (
-        <Suspense fallback={<div className="loading-container"><div className="loading-spinner">⚡</div></div>}>
-          <CustomerAccount 
-            currentUser={currentUser}
-            onLogout={handleLogout}
-            orders={orders}
-            wishlist={wishlist}
-            onPageChange={handlePageChange}
-            onProductClick={handleProductClick}
-            onAddToCart={handleAddToCart}
-            onRemoveFromWishlist={handleRemoveFromWishlist}
-            showToast={showToast}
-          />
-        </Suspense>
+        isAuthenticated ? (
+          <Suspense fallback={<div className="loading-container"><div className="loading-spinner">⚡</div></div>}>
+            <CustomerAccount 
+              currentUser={currentUser}
+              onLogout={handleLogout}
+              orders={orders}
+              wishlist={wishlist}
+              onPageChange={handlePageChange}
+              onProductClick={handleProductClick}
+              onAddToCart={handleAddToCart}
+              onRemoveFromWishlist={handleRemoveFromWishlist}
+              showToast={showToast}
+            />
+          </Suspense>
+        ) : (
+          <div className="login-required-container" style={{ textAlign: 'center', padding: '80px 20px', minHeight: '50vh' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>👤</div>
+            <h2 style={{ fontSize: '28px', fontWeight: '800', marginBottom: '12px' }}>Customer Account</h2>
+            <p style={{ color: 'var(--text-secondary, #666)', marginBottom: '24px', maxWidth: '400px', margin: '0 auto 24px' }}>
+              Please sign in to access your profile, order history, and preferences.
+            </p>
+            <button 
+              className="btn-primary" 
+              onClick={() => setCurrentPage('login')}
+              style={{ padding: '12px 32px', fontSize: '15px', fontWeight: '700', borderRadius: '8px' }}
+            >
+              Sign In / Register
+            </button>
+          </div>
+        )
       )}
 
-      {selectedProduct && (
-        <ProductDetail
-          product={selectedProduct}
-          onClose={handleCloseDetail}
-          onAddToCart={handleAddToCart}
-          onAddToWishlist={handleAddToWishlist}
-          isInWishlist={wishlist.some(item => (item.id || item._id) === (selectedProduct.id || selectedProduct._id))}
+      {currentPage === 'login' && !isAuthenticated && (
+        <Login 
+          onLogin={(user, type) => {
+            handleLogin(user, type);
+            setCurrentPage('home');
+          }} 
+          isAdmin={isAdminRoute} 
         />
+      )}
+        </>
       )}
 
       {quickViewProduct && (
@@ -733,10 +993,21 @@ function App() {
             isInWishlist={wishlist.some(item => (item.id || item._id) === (quickViewProduct.id || quickViewProduct._id))}
             onViewFullDetails={(p) => {
               setQuickViewProduct(null);
-              setSelectedProduct(p);
+              handleProductClick(p);
             }}
           />
         </Suspense>
+      )}
+
+      {/* Mobile Sticky Bottom Navigation (Mobile Viewports < 768px, Storefront only) */}
+      {!isAdminRoute && userType !== 'admin' && currentPage !== 'product' && (
+        <MobileBottomNav
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          cartCount={cart.reduce((total, item) => total + (item.quantity || 1), 0)}
+          wishlistCount={wishlist.length}
+          isAuthenticated={isAuthenticated}
+        />
       )}
 
       <Footer onPageChange={handlePageChange} />

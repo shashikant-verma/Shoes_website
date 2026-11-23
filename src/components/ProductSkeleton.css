@@ -1,0 +1,90 @@
+/* ==========================================================================
+   SOLEVIBE — PRODUCT SKELETON SHIMMER LOADER
+   Consistent 4:5 aspect ratio for CLS < 0.1 performance
+   ========================================================================== */
+
+.product-skeleton {
+  background: #ffffff;
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: var(--radius-lg, 16px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #f3f4f6 0%,
+    #e5e7eb 50%,
+    #f3f4f6 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer-anim 1.5s infinite ease-in-out;
+}
+
+@keyframes skeleton-shimmer-anim {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-image-wrap {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+}
+
+.skeleton-body {
+  padding: 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  flex-grow: 1;
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 4px;
+}
+
+.skeleton-line.category {
+  width: 35%;
+  height: 10px;
+}
+
+.skeleton-line.title {
+  width: 80%;
+  height: 16px;
+}
+
+.skeleton-line.title-sub {
+  width: 60%;
+  height: 14px;
+}
+
+.skeleton-line.rating {
+  width: 45%;
+  height: 10px;
+  margin-top: 0.25rem;
+}
+
+.skeleton-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+.skeleton-line.price {
+  width: 40%;
+  height: 16px;
+}
+
+.skeleton-line.stock {
+  width: 25%;
+  height: 10px;
+}

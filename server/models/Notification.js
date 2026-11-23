@@ -49,7 +49,7 @@ const notificationSchema = new mongoose.Schema({
   metadata: { type: mongoose.Schema.Types.Mixed },
   isRead: { type: Boolean, default: false },
   readAt: { type: Date },
-  referenceId: { type: String, sparse: true }
+  referenceId: { type: String }
 }, { timestamps: true });
 
 notificationSchema.index({ recipient: 1, createdAt: -1 });

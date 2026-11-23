@@ -74,6 +74,8 @@ const getProducts = async (req, res, next) => {
         { name: { $regex: escapedSearch, $options: 'i' } },
         { description: { $regex: escapedSearch, $options: 'i' } },
         { brand: { $regex: escapedSearch, $options: 'i' } },
+        { category: { $regex: escapedSearch, $options: 'i' } },
+        { productType: { $regex: escapedSearch, $options: 'i' } },
         { sku: { $regex: escapedSearch, $options: 'i' } }
       ];
     }
@@ -102,6 +104,7 @@ const getProducts = async (req, res, next) => {
     // Get total count for pagination
     const totalProducts = await Product.countDocuments(query);
 
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=30');
     res.json({
       success: true,
       count: products.length,
@@ -138,6 +141,7 @@ const getProduct = async (req, res, next) => {
       });
     }
 
+    res.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=60');
     res.json({
       success: true,
       data: product

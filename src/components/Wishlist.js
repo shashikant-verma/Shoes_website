@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
 import './Wishlist.css';
 
-function Wishlist({ wishlist, onRemoveFromWishlist, onProductClick, onAddToCart }) {
+function Wishlist({ wishlist = [], onRemoveFromWishlist, onProductClick, onAddToCart }) {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  if (wishlist.length === 0) {
+  if (!wishlist || wishlist.length === 0) {
     return (
       <div className="wishlist-page">
         <div className="wishlist-container">
-          <div className="wishlist-empty">
-            <div className="empty-icon">❤️</div>
-            <h2 className="headline-lg">Your Wishlist is Empty</h2>
-            <p className="body-lg">Save your favorite shoes here for later!</p>
+          <div className="wishlist-empty-card">
+            <span className="empty-heart-icon">🖤</span>
+            <h2 className="empty-title">YOUR WISHLIST IS EMPTY</h2>
+            <p className="empty-sub">
+              Curate your personal SoleVibe footwear roster. Tap the heart icon on any pair to save it for future runs and drops.
+            </p>
+            <a href="/" className="btn-primary btn-explore-wishlist">
+              EXPLORE FOOTWEAR
+            </a>
           </div>
         </div>
       </div>
@@ -20,96 +25,127 @@ function Wishlist({ wishlist, onRemoveFromWishlist, onProductClick, onAddToCart 
 
   const handleMoveToCart = (product) => {
     if (product.stock === 0) return;
-    const defaultSize = (product.sizes && product.sizes.length > 0) ? product.sizes[0] : 'UK 8';
-    onAddToCart({
-      ...product,
-      size: defaultSize,
-      quantity: 1
-    });
-    onRemoveFromWishlist(product.id || product._id);
+    const defaultSize = (product.sizes && product.sizes.length > 0) ? product.sizes[0] : '8';
+    if (onAddToCart) {
+      onAddToCart({
+        ...product,
+        size: defaultSize.toString().replace(/UK\s*/i, ''),
+        quantity: 1
+      });
+    }
+    if (onRemoveFromWishlist) {
+      onRemoveFromWishlist(product.id || product._id);
+    }
   };
 
   const handleClearWishlist = () => {
-    wishlist.forEach(item => onRemoveFromWishlist(item.id || item._id));
+    wishlist.forEach(item => onRemoveFromWishlist && onRemoveFromWishlist(item.id || item._id));
     setShowClearConfirm(false);
   };
 
   return (
     <div className="wishlist-page">
       <div className="wishlist-container">
-        <div className="wishlist-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
+        {/* Wishlist Header */}
+        <div className="wishlist-header-row">
           <div>
             <div className="telemetry-badge">
               <span className="status-dot pulse-glow"></span>
-              <span className="telemetry-label">FAVORITES</span>
+              <span className="telemetry-label">SAVED ATHLETE ROSTER</span>
             </div>
-            <h1 className="headline-lg">Your Wishlist ({wishlist.length})</h1>
-            <p className="body-md">Keep track of products you love</p>
+            <h1 className="wishlist-title">SAVED FOOTWEAR ({wishlist.length})</h1>
+            <p className="wishlist-subtitle">Your curated selection of personal favorites and future drops.</p>
           </div>
           
           <button 
             type="button" 
+            className="btn-clear-wishlist"
             onClick={() => setShowClearConfirm(true)}
-            style={{ padding: '0.5rem 1rem', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
           >
-            Clear Wishlist
+            Clear All Saved
           </button>
         </div>
 
+        {/* 4-Column Product Grid */}
         <div className="wishlist-grid">
           {wishlist.map((product, index) => {
-            const isOOS = product.stock === 0;
+            const isOOS = Number(product.stock) === 0;
+            const productId = product.id || product._id || index;
+            const weightSpec = product.specifications?.weight || product.specs?.weight;
+            const dropSpec = product.specifications?.drop || product.specs?.drop;
+
             return (
               <div
-                key={product.id || product._id || index}
+                key={productId}
                 className="wishlist-card"
-                style={{ animationDelay: `${index * 0.1}s` }}
+                style={{ animationDelay: `${index * 0.05}s` }}
               >
+                {/* Heart Remove Action */}
                 <button
+                  type="button"
                   className="btn-remove-wishlist"
-                  onClick={() => onRemoveFromWishlist(product.id || product._id)}
+                  onClick={() => onRemoveFromWishlist && onRemoveFromWishlist(product.id || product._id)}
                   title="Remove from wishlist"
+                  aria-label={`Remove ${product.name} from wishlist`}
                 >
-                  ❤️
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#FF4D2E" stroke="#FF4D2E" strokeWidth="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                  </svg>
                 </button>
 
+                {/* Footwear Thumbnail */}
                 <div 
                   className="wishlist-image-container"
-                  onClick={() => onProductClick(product)}
+                  onClick={() => onProductClick && onProductClick(product)}
+                  role="button"
+                  tabIndex="0"
                 >
                   <img src={product.image} alt={product.name} className="wishlist-image" />
                   {isOOS && (
-                    <span className="stock-tag tag-soldout" style={{ position: 'absolute', top: '10px', left: '10px', background: '#fef2f2', color: '#b91c1c', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700 }}>
+                    <span className="wishlist-stock-badge oos-badge">
                       SOLD OUT
+                    </span>
+                  )}
+                  {product.category && (
+                    <span className="wishlist-category-tag">
+                      {product.category.toUpperCase()}
                     </span>
                   )}
                 </div>
 
+                {/* Details & Action */}
                 <div className="wishlist-info">
-                  <h3 className="headline-md">{product.name}</h3>
+                  <h3 
+                    className="wishlist-product-name"
+                    onClick={() => onProductClick && onProductClick(product)}
+                  >
+                    {product.name}
+                  </h3>
                   
-                  <div className="wishlist-rating">
-                    <span className="rating-stars">{'⭐'.repeat(Math.floor(product.rating || 5))}</span>
-                    <span className="rating-value telemetry-label">{product.rating || 5}</span>
-                  </div>
+                  {/* Genuine Specs Only */}
+                  {(weightSpec || dropSpec) && (
+                    <div className="wishlist-specs-strip">
+                      {weightSpec && <span className="spec-chip">WT: {weightSpec}</span>}
+                      {dropSpec && <span className="spec-chip">DROP: {dropSpec}</span>}
+                    </div>
+                  )}
 
-                  <div className="wishlist-specs">
-                    <span className="telemetry-label">{product.specifications?.weight || product.specs?.weight || '290g'}</span>
-                    <span className="spec-dot">•</span>
-                    <span className="telemetry-label">{product.stock > 0 ? `${product.stock} In Stock` : 'Out of Stock'}</span>
-                  </div>
-
-                  <div className="wishlist-footer" style={{ gap: '0.5rem' }}>
-                    <span className="wishlist-price">₹{Number(product.price || 0).toLocaleString()}</span>
+                  <div className="wishlist-footer">
+                    <div className="price-stack">
+                      <span className="current-price">₹{Number(product.price || 0).toLocaleString()}</span>
+                      {product.originalPrice && product.originalPrice > product.price && (
+                        <span className="original-price">₹{Number(product.originalPrice).toLocaleString()}</span>
+                      )}
+                    </div>
                     
                     <button
                       type="button"
-                      className="btn-add-from-wishlist"
+                      className="btn-move-to-cart"
                       onClick={() => handleMoveToCart(product)}
                       disabled={isOOS}
-                      style={{ opacity: isOOS ? 0.5 : 1, cursor: isOOS ? 'not-allowed' : 'pointer' }}
                     >
-                      <span className="telemetry-label">{isOOS ? 'OOS' : 'MOVE TO CART'}</span>
+                      <span>{isOOS ? 'SOLD OUT' : 'MOVE TO BAG'}</span>
+                      {!isOOS && <span className="btn-icon">→</span>}
                     </button>
                   </div>
                 </div>
@@ -119,24 +155,26 @@ function Wishlist({ wishlist, onRemoveFromWishlist, onProductClick, onAddToCart 
         </div>
       </div>
 
-      {/* Clear Wishlist Modal */}
+      {/* Clear Wishlist Confirmation Modal */}
       {showClearConfirm && (
         <div className="modal-backdrop fade-in" onClick={() => setShowClearConfirm(false)}>
-          <div className="glass-panel" onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: '16px', padding: '2rem', maxWidth: '400px', textAlign: 'center' }}>
-            <h3 style={{ margin: '0 0 0.5rem', color: '#111827' }}>Clear Entire Wishlist?</h3>
-            <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Are you sure you want to remove all saved items from your wishlist?</p>
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+          <div className="clear-confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Clear All Saved Shoes?</h3>
+            <p>Are you sure you want to remove all {wishlist.length} footwear items from your saved roster?</p>
+            <div className="modal-actions-row">
               <button 
+                type="button"
+                className="btn-modal-cancel"
                 onClick={() => setShowClearConfirm(false)}
-                style={{ padding: '0.6rem 1.2rem', border: '1px solid #d1d5db', background: '#fff', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
               >
-                Cancel
+                Keep Saved
               </button>
               <button 
+                type="button"
+                className="btn-modal-danger"
                 onClick={handleClearWishlist}
-                style={{ padding: '0.6rem 1.2rem', border: 'none', background: '#ef4444', color: '#fff', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
               >
-                Yes, Clear All
+                Clear Entire List
               </button>
             </div>
           </div>

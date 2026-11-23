@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, authorize } = require('../middleware/authMiddleware');
 const {
+  getApprovedReviews,
   getProductReviews,
   getMyReview,
   createReview,
@@ -13,6 +14,7 @@ const {
 } = require('../controllers/reviewController');
 
 // Public routes
+router.get('/', getApprovedReviews);
 router.get('/product/:productId', getProductReviews);
 
 // Protected routes (Logged-in user)

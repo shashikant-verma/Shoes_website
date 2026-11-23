@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './ProductsManager.css';
 import ProductFormModal from './ProductFormModal';
 import ConfirmationModal from './ConfirmationModal';
@@ -89,15 +89,7 @@ function ProductsManager() {
     setToast(prev => ({ ...prev, show: false }));
   };
 
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
-  useEffect(() => {
-    applyFiltersAndSort();
-  }, [products, filters, sortBy, sortOrder]);
-
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     setLoading(true);
     try {
       const result = await productService.getProducts({ limit: 100 });
@@ -113,9 +105,13 @@ function ProductsManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const applyFiltersAndSort = () => {
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  const applyFiltersAndSort = useCallback(() => {
     let filtered = [...products];
 
     // Apply search filter
@@ -186,7 +182,11 @@ function ProductsManager() {
     });
 
     setFilteredProducts(filtered);
-  };
+  }, [products, filters, sortBy, sortOrder]);
+
+  useEffect(() => {
+    applyFiltersAndSort();
+  }, [applyFiltersAndSort]);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({

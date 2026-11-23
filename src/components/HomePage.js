@@ -1,340 +1,672 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './HomePage.css';
 import productService from '../services/productService';
+import reviewService from '../services/reviewService';
+import newsletterService from '../services/newsletterService';
+import ProductCard from './ProductCard';
 import ProductSkeleton from './ProductSkeleton';
+import Hero3D from './Hero3D';
 
-function HomePage({ onPageChange }) {
-  const carouselRef = useRef(null);
-  const [isScrolling, setIsScrolling] = useState(false);
-
+function HomePage({ 
+  onPageChange, 
+  onProductClick, 
+  wishlist = [], 
+  onToggleWishlist, 
+  onQuickView 
+}) {
+  // State for dynamic products and reviews fetched from MongoDB
   const [featuredProducts, setFeaturedProducts] = useState([]);
-  const [featuredLoading, setFeaturedLoading] = useState(true);
-  const [featuredError, setFeaturedError] = useState(false);
+  const [newArrivals, setNewArrivals] = useState([]);
+  const [bestSellers, setBestSellers] = useState([]);
+  const [approvedReviews, setApprovedReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  
+  // Newsletter subscription state
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterLoading, setNewsletterLoading] = useState(false);
+  const [newsletterStatus, setNewsletterStatus] = useState(''); // 'success' | 'error' | ''
+  const [newsletterMessage, setNewsletterMessage] = useState('');
 
   useEffect(() => {
     let isMounted = true;
 
-    const loadFeaturedProducts = async () => {
-      const result = await productService.getProducts({
-        status: 'active',
-        featured: true,
-        limit: 6
-      });
+    const loadCatalogData = async () => {
+      try {
+        // 1. Fetch featured products from MongoDB
+        const featuredRes = await productService.getProducts({
+          status: 'active',
+          featured: true,
+          limit: 6
+        });
 
-      if (isMounted && result.success) {
-        setFeaturedProducts(result.data.data.map((product) => ({
-          ...product,
-          id: product._id,
-          badge: product.badge || 'FEATURED',
-          badgeColor: product.badgeColor || 'primary',
-          rating: product.rating || 0,
-          reviews: product.reviewCount || 0
-        })));
-      } else if (isMounted) {
-        setFeaturedError(true);
+        // 2. Fetch new arrivals sorted by newest
+        const newRes = await productService.getProducts({
+          status: 'active',
+          sort: '-createdAt',
+          limit: 4
+        });
+
+        // 3. Fetch general catalog to populate best sellers
+        const catalogRes = await productService.getProducts({
+          status: 'active',
+          limit: 12
+        });
+
+        // 4. Fetch approved customer reviews from MongoDB
+        const reviewsRes = await reviewService.getApprovedReviews(6);
+
+        if (isMounted) {
+          const featuredList = (featuredRes?.data?.data || []).map(p => ({ ...p, id: p._id }));
+          const newList = (newRes?.data?.data || []).map(p => ({ ...p, id: p._id, badge: 'NEW RELEASE' }));
+          const allList = (catalogRes?.data?.data || []).map(p => ({ ...p, id: p._id }));
+
+          setFeaturedProducts(featuredList.length > 0 ? featuredList : allList.slice(0, 4));
+          setNewArrivals(newList.length > 0 ? newList : allList.slice(4, 8));
+          
+          // Strict filter: require both BEST badge and verified rating >= 4.3
+          const bestSellerCandidates = allList.filter(p => 
+            p.badge?.includes('BEST') && Number(p.rating || 0) >= 4.3
+          );
+          setBestSellers(
+            bestSellerCandidates.length >= 4 
+              ? bestSellerCandidates.slice(0, 4) 
+              : allList.slice().sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 4)
+          );
+
+          if (reviewsRes && reviewsRes.success && Array.isArray(reviewsRes.data)) {
+            setApprovedReviews(reviewsRes.data);
+          }
+          setReviewsLoading(false);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Error loading homepage catalog data:', err);
+        if (isMounted) {
+          setLoading(false);
+          setReviewsLoading(false);
+        }
       }
-
-      if (isMounted) setFeaturedLoading(false);
     };
 
-    loadFeaturedProducts();
+    loadCatalogData();
     return () => { isMounted = false; };
   }, []);
 
-  const scrollCarousel = (direction) => {
-    if (carouselRef.current && !isScrolling) {
-      setIsScrolling(true);
-      const scrollAmount = 400;
-      const newScrollLeft = carouselRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
-      
-      carouselRef.current.scrollTo({
-        left: newScrollLeft,
-        behavior: 'smooth'
+  const handleNewsletterSubmit = async (e) => {
+    e.preventDefault();
+    if (!newsletterEmail || !newsletterEmail.includes('@')) {
+      setNewsletterStatus('error');
+      setNewsletterMessage('Please enter a valid email address.');
+      return;
+    }
+
+    setNewsletterLoading(true);
+    setNewsletterStatus('');
+    setNewsletterMessage('');
+
+    try {
+      const res = await newsletterService.subscribe({
+        email: newsletterEmail.trim(),
+        source: 'homepage'
       });
 
-      setTimeout(() => setIsScrolling(false), 500);
+      setNewsletterLoading(false);
+      if (res && res.success) {
+        setNewsletterStatus('success');
+        setNewsletterMessage(res.message || 'You are on the roster. Watch your inbox for upcoming updates.');
+        setTimeout(() => {
+          setNewsletterEmail('');
+        }, 4000);
+      } else {
+        setNewsletterStatus('error');
+        setNewsletterMessage(res?.message || 'Unable to complete subscription. Please try again.');
+      }
+    } catch (err) {
+      setNewsletterLoading(false);
+      setNewsletterStatus('error');
+      setNewsletterMessage('Network error processing subscription. Please check your connection.');
+    }
+  };
+
+  const handleProductCardClick = (product) => {
+    if (onProductClick) {
+      onProductClick(product);
+    } else {
+      window.dispatchEvent(new CustomEvent('openProductDetail', { detail: product }));
+    }
+  };
+
+  const handleDisciplineKeyDown = (page, e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onPageChange(page);
     }
   };
 
   return (
-    <section className="home-page">
-      {/* Hero Section */}
-      <div className="hero-section">
-        <div className="hero-container">
-          <div className="hero-content">
-            <div className="hero-badge">
-              <span className="badge-dot"></span>
-              <span>THE NEW SEASON</span>
+    <div className="home-page">
+      {/* 1. Value Proposition Utility Ticker */}
+      <section className="home-utility-ticker" aria-label="Store Benefits">
+        <div className="container">
+          <div className="utility-ticker-grid">
+            <div className="ticker-item">
+              <span className="ticker-icon" aria-hidden="true">⚡</span>
+              <span className="ticker-text">RESPONSIVE CUSHIONING & SUPPORT</span>
             </div>
-            
-            <h1 className="hero-title">
-              <span className="hero-subtitle">Step into your everyday</span>
-              <span className="hero-main">STEP INTO</span>
-              <span className="hero-accent">YOUR VIBE</span>
-            </h1>
-            
-            <p className="hero-description">
-              Signature sneakers and everyday essentials designed to move with your style.
-              Find your next pair in the SoleVibe edit.
-            </p>
-
-            <div className="hero-stats">
-              <div className="stat">
-                <span className="stat-number">18%</span>
-                <span className="stat-label">Energy Return</span>
-              </div>
-              <div className="stat">
-                <span className="stat-number">165g</span>
-                <span className="stat-label">Ultra Light</span>
-              </div>
-              <div className="stat">
-                <span className="stat-number">4.9★</span>
-                <span className="stat-label">Rated</span>
-              </div>
+            <div className="ticker-item">
+              <span className="ticker-icon" aria-hidden="true">🚚</span>
+              <span className="ticker-text">FREE STANDARD SHIPPING OVER ₹15,000</span>
             </div>
-
-            <div className="hero-actions">
-              <button className="btn-hero-primary" onClick={() => onPageChange('men')}>
-                Shop Men
-                <span className="btn-arrow">→</span>
-              </button>
-              <button className="btn-hero-secondary" onClick={() => onPageChange('women')}>
-                Shop Women
-                <span className="btn-arrow">→</span>
-              </button>
+            <div className="ticker-item">
+              <span className="ticker-icon" aria-hidden="true">🔄</span>
+              <span className="ticker-text">EASY 7-DAY RETURN POLICY</span>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="hero-visual">
-            <div className="hero-image-container">
+      {/* 2. High-Impact Editorial Hero Section */}
+      <section className="home-hero-container">
+        <Hero3D onExplore={(page) => onPageChange(page || 'shop')} />
+      </section>
+
+      {/* 3. Featured Footwear Categories */}
+      <section className="home-section categories-curated-section" aria-label="Footwear Collections">
+        <div className="container">
+          <div className="section-header-row">
+            <div>
+              <span className="telemetry-label section-eyebrow">MOVEMENT DISCIPLINES</span>
+              <h2 className="headline-lg section-heading">DISCIPLINE-DRIVEN FOOTWEAR</h2>
+            </div>
+            <button 
+              type="button" 
+              onClick={() => onPageChange('shop')} 
+              className="btn-link-action"
+              aria-label="View all footwear collections"
+            >
+              <span>View All Collections</span>
+              <span className="arrow-icon" aria-hidden="true">→</span>
+            </button>
+          </div>
+
+          <div className="category-cards-grid">
+            {/* Category 1: Road Running */}
+            <div 
+              className="discipline-card" 
+              onClick={() => onPageChange('running')}
+              onKeyDown={(e) => handleDisciplineKeyDown('running', e)}
+              role="button"
+              tabIndex={0}
+              aria-label="Explore Road Running collection"
+            >
+              <div className="discipline-img-wrap">
+                <img 
+                  src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80" 
+                  alt="Road Running" 
+                  className="discipline-img"
+                  loading="lazy"
+                />
+                <div className="discipline-badge">
+                  <span className="telemetry-label">ROAD RUNNING</span>
+                </div>
+              </div>
+              <div className="discipline-info">
+                <h3 className="headline-sm discipline-title">ROAD RUNNING</h3>
+                <p className="body-sm discipline-desc">
+                  Cushioned midsole geometries engineered for daily tempo and high-cadence distance.
+                </p>
+                <span className="discipline-cta">EXPLORE ROAD →</span>
+              </div>
+            </div>
+
+            {/* Category 2: Trail & Alpine */}
+            <div 
+              className="discipline-card" 
+              onClick={() => onPageChange('trail')}
+              onKeyDown={(e) => handleDisciplineKeyDown('trail', e)}
+              role="button"
+              tabIndex={0}
+              aria-label="Explore Trail and Outdoor collection"
+            >
+              <div className="discipline-img-wrap">
+                <img 
+                  src="https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&q=80" 
+                  alt="Trail and Outdoor Footwear" 
+                  className="discipline-img"
+                  loading="lazy"
+                />
+                <div className="discipline-badge">
+                  <span className="telemetry-label">ALL-TERRAIN</span>
+                </div>
+              </div>
+              <div className="discipline-info">
+                <h3 className="headline-sm discipline-title">TRAIL & OUTDOOR</h3>
+                <p className="body-sm discipline-desc">
+                  Durable all-terrain lug geometry built for confident traction across dirt, gravel, and outdoor paths.
+                </p>
+                <span className="discipline-cta">EXPLORE TRAIL →</span>
+              </div>
+            </div>
+
+            {/* Category 3: Racing Lab */}
+            <div 
+              className="discipline-card" 
+              onClick={() => onPageChange('racing')}
+              onKeyDown={(e) => handleDisciplineKeyDown('racing', e)}
+              role="button"
+              tabIndex={0}
+              aria-label="Explore Fast Tempo and Racing collection"
+            >
+              <div className="discipline-img-wrap">
+                <img 
+                  src="https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800&q=80" 
+                  alt="Fast Tempo Footwear" 
+                  className="discipline-img"
+                  loading="lazy"
+                />
+                <div className="discipline-badge">
+                  <span className="telemetry-label">FAST TEMPO</span>
+                </div>
+              </div>
+              <div className="discipline-info">
+                <h3 className="headline-sm discipline-title">RACE & TEMPO</h3>
+                <p className="body-sm discipline-desc">
+                  Ultra-lightweight performance footwear tuned for pace hunting, track intervals, and race day.
+                </p>
+                <span className="discipline-cta">EXPLORE RACING →</span>
+              </div>
+            </div>
+
+            {/* Category 4: Daily Rotation */}
+            <div 
+              className="discipline-card" 
+              onClick={() => onPageChange('men')}
+              onKeyDown={(e) => handleDisciplineKeyDown('men', e)}
+              role="button"
+              tabIndex={0}
+              aria-label="Explore Daily Lifestyle collection"
+            >
+              <div className="discipline-img-wrap">
+                <img 
+                  src="https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=800&q=80" 
+                  alt="Daily Rotation Footwear" 
+                  className="discipline-img"
+                  loading="lazy"
+                />
+                <div className="discipline-badge">
+                  <span className="telemetry-label">LIFESTYLE</span>
+                </div>
+              </div>
+              <div className="discipline-info">
+                <h3 className="headline-sm discipline-title">DAILY ROTATION</h3>
+                <p className="body-sm discipline-desc">
+                  Considered craftsmanship paired with lightweight EVA midsole cushioning for all-day comfort.
+                </p>
+                <span className="discipline-cta">EXPLORE LIFESTYLE →</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. Trending Performance Drops (Dynamic from MongoDB) */}
+      <section className="home-section trending-section" aria-label="Trending Footwear">
+        <div className="container">
+          <div className="section-header-row">
+            <div>
+              <span className="telemetry-label section-eyebrow">FEATURED SELECTION</span>
+              <h2 className="headline-lg section-heading">TRENDING ATHLETIC STYLES</h2>
+            </div>
+            <button 
+              type="button" 
+              onClick={() => onPageChange('shop')} 
+              className="btn-link-action"
+              aria-label="Explore all footwear"
+            >
+              <span>Explore All Shoes</span>
+              <span className="arrow-icon" aria-hidden="true">→</span>
+            </button>
+          </div>
+
+          <div className="product-showcase-grid">
+            {loading ? (
+              [1, 2, 3, 4].map(i => <ProductSkeleton key={i} />)
+            ) : featuredProducts.length > 0 ? (
+              featuredProducts.map((product, idx) => (
+                <ProductCard
+                  key={product.id || product._id}
+                  product={product}
+                  index={idx}
+                  onProductClick={handleProductCardClick}
+                  isInWishlist={wishlist.some(w => (w.id || w._id) === (product.id || product._id))}
+                  onToggleWishlist={onToggleWishlist}
+                  onQuickView={onQuickView}
+                />
+              ))
+            ) : (
+              <p className="body-md empty-state-note">Catalog synchronization in progress...</p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* 5. Footwear Engineering Architecture (Honest Engineering Architecture) */}
+      <section className="home-section innovation-section" aria-label="Footwear Engineering Architecture">
+        <div className="container">
+          <div className="innovation-header text-center">
+            <span className="telemetry-label section-eyebrow">ENGINEERED EXCELLENCE</span>
+            <h2 className="headline-lg innovation-title">FOOTWEAR ENGINEERING ARCHITECTURE</h2>
+            <p className="body-md innovation-subtitle">
+              Every silhouette is crafted with thoughtful materials, balanced cushioning, and durable construction to keep you moving comfortably.
+            </p>
+          </div>
+
+          <div className="innovation-grid">
+            {/* Tech Pillar 1 */}
+            <div className="tech-pillar-card">
+              <div className="tech-pillar-header">
+                <span className="tech-pill-index">01</span>
+                <span className="badge-telemetry">HIGH-REBOUND EVA</span>
+              </div>
+              <h3 className="headline-sm tech-pillar-title">Multi-Density Midsole Core</h3>
+              <p className="body-sm tech-pillar-desc">
+                Layered EVA foam cushioning provides effective shock absorption and consistent energy response across everyday training miles.
+              </p>
+              <div className="tech-telemetry-row">
+                <span className="telemetry-label">CUSHIONING:</span>
+                <span className="telemetry-metric">RESPONSIVE EVA</span>
+              </div>
+            </div>
+
+            {/* Tech Pillar 2 */}
+            <div className="tech-pillar-card">
+              <div className="tech-pillar-header">
+                <span className="tech-pill-index">02</span>
+                <span className="badge-telemetry">ARCH SUPPORT</span>
+              </div>
+              <h3 className="headline-sm tech-pillar-title">Balanced Midfoot Architecture</h3>
+              <p className="body-sm tech-pillar-desc">
+                Reinforced midfoot geometry provides natural arch stability and smooth heel-to-toe gait transitions with zero unnecessary bulk.
+              </p>
+              <div className="tech-telemetry-row">
+                <span className="telemetry-label">STABILITY:</span>
+                <span className="telemetry-metric">NEUTRAL ARCH</span>
+              </div>
+            </div>
+
+            {/* Tech Pillar 3 */}
+            <div className="tech-pillar-card">
+              <div className="tech-pillar-header">
+                <span className="tech-pill-index">03</span>
+                <span className="badge-telemetry">VENTILATED UPPER</span>
+              </div>
+              <h3 className="headline-sm tech-pillar-title">Breathable Engineered Mesh</h3>
+              <p className="body-sm tech-pillar-desc">
+                Lightweight open-cell mesh promotes continuous airflow while comfortably wrapping the foot for a secure, irritation-free fit.
+              </p>
+              <div className="tech-telemetry-row">
+                <span className="telemetry-label">BREATHABILITY:</span>
+                <span className="telemetry-metric">HIGH AIRFLOW</span>
+              </div>
+            </div>
+
+            {/* Tech Pillar 4 */}
+            <div className="tech-pillar-card">
+              <div className="tech-pillar-header">
+                <span className="tech-pill-index">04</span>
+                <span className="badge-telemetry">GEOMETRIC TREAD</span>
+              </div>
+              <h3 className="headline-sm tech-pillar-title">Multi-Surface Rubber Outsole</h3>
+              <p className="body-sm tech-pillar-desc">
+                High-abrasion rubber compound with geometric tread patterns delivers confident grip across roads, sidewalks, and turf.
+              </p>
+              <div className="tech-telemetry-row">
+                <span className="telemetry-label">OUTSOLE:</span>
+                <span className="telemetry-metric">DURABLE TRACTION</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. New Arrivals Showcase (Dynamic from MongoDB) */}
+      <section className="home-section new-arrivals-section" aria-label="New Releases">
+        <div className="container">
+          <div className="section-header-row">
+            <div>
+              <span className="telemetry-label section-eyebrow">JUST IN</span>
+              <h2 className="headline-lg section-heading">NEW RELEASES</h2>
+            </div>
+            <button 
+              type="button" 
+              onClick={() => onPageChange('new-arrivals')} 
+              className="btn-link-action"
+              aria-label="Explore all new releases"
+            >
+              <span>Explore New Releases</span>
+              <span className="arrow-icon" aria-hidden="true">→</span>
+            </button>
+          </div>
+
+          <div className="product-showcase-grid">
+            {loading ? (
+              [1, 2, 3, 4].map(i => <ProductSkeleton key={i} />)
+            ) : newArrivals.length > 0 ? (
+              newArrivals.map((product, idx) => (
+                <ProductCard
+                  key={product.id || product._id}
+                  product={product}
+                  index={idx}
+                  onProductClick={handleProductCardClick}
+                  isInWishlist={wishlist.some(w => (w.id || w._id) === (product.id || product._id))}
+                  onToggleWishlist={onToggleWishlist}
+                  onQuickView={onQuickView}
+                />
+              ))
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      {/* 7. Lifestyle Campaign Lookbook */}
+      <section className="home-section campaign-lookbook-section" aria-label="Lifestyle Campaign">
+        <div className="container">
+          <div className="lookbook-banner-card">
+            <div className="lookbook-visual-column">
               <img 
-                src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800" 
-                alt="SoleVibe Performance Shoe"
-                className="hero-image"
+                src="https://images.unsplash.com/photo-1515955656352-a1fa3ffcd111?w=1000&q=80" 
+                alt="SoleVibe Daily Rotation Campaign" 
+                className="lookbook-img"
+                loading="lazy"
               />
-              <div className="hero-glow"></div>
+              <div className="lookbook-floating-tag">
+                <span className="badge-telemetry">SOLEVIBE PERFORMANCE STUDIO</span>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Featured Products Carousel */}
-      <section className="featured-section">
-        <div className="container">
-          <div className="section-header">
-            <div className="section-badge">
-              <span>THE SOLEVIBE EDIT</span>
-            </div>
-            <h2 className="section-title">Fresh steps, considered details</h2>
-            <p className="section-subtitle">
-              A refined edit of pairs made for daily plans, late nights, and everything between.
-            </p>
-          </div>
+            <div className="lookbook-content-column">
+              <span className="telemetry-label section-eyebrow">EDITORIAL CAMPAIGN</span>
+              <h2 className="display-xl lookbook-title">THE DAILY ROTATION.</h2>
+              <p className="body-md lookbook-lead">
+                Athletic capability meets understated minimalism. Designed for runners and movers who transition effortlessly between workouts, studio sessions, and city days.
+              </p>
+              
+              <div className="lookbook-specs-list">
+                <div className="spec-row">
+                  <span className="spec-label">UPPER MATERIAL:</span>
+                  <span className="spec-value">Breathable Technical Mesh</span>
+                </div>
+                <div className="spec-row">
+                  <span className="spec-label">SOCKLINER:</span>
+                  <span className="spec-value">Cushioned Comfort Footbed</span>
+                </div>
+                <div className="spec-row">
+                  <span className="spec-label">STANCE GEOMETRY:</span>
+                  <span className="spec-value">Neutral All-Day Stance</span>
+                </div>
+              </div>
 
-          <div className="carousel-container">
-            <button 
-              className="carousel-btn carousel-btn-prev" 
-              onClick={() => scrollCarousel('left')}
-              aria-label="Previous products"
-            >
-              ←
-            </button>
-
-            <div className="carousel-track" ref={carouselRef}>
-              {featuredLoading && [1, 2, 3].map((item) => <ProductSkeleton key={item} />)}
-              {!featuredLoading && !featuredError && featuredProducts.map((product, index) => (
-                <div 
-                  key={product.id} 
-                  className="product-card-featured"
-                  onClick={() => onPageChange('products')}
+              <div className="lookbook-action-row">
+                <button 
+                  type="button" 
+                  onClick={() => onPageChange('women')} 
+                  className="btn-primary"
+                  aria-label="Shop women's collection"
                 >
-                  <div className={`product-badge badge-${product.badgeColor}`}>
-                    {product.badge}
-                  </div>
-                  
-                  <div className="product-image-wrapper">
-                    <img src={product.image} alt={product.name} className="product-image" />
-                    <div className="product-overlay">
-                      <button className="btn-quick-view">
-                        Quick View
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="product-info">
-                    <h3 className="product-name">{product.name}</h3>
-                    <div className="product-rating">
-                      <div className="stars">{'★'.repeat(Math.floor(product.rating || 0))}{'☆'.repeat(Math.max(0, 5 - Math.floor(product.rating || 0)))}</div>
-                      <span className="rating-count">({product.reviews || 0})</span>
-                    </div>
-                    <div className="product-price">
-                      <span className="current-price">₹{Number(product.price || 0).toLocaleString()}</span>
-                      {product.originalPrice && (
-                        <>
-                          <span className="original-price">₹{Number(product.originalPrice).toLocaleString()}</span>
-                          <span className="discount-badge">{product.discount}% OFF</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {!featuredLoading && featuredError && (
-                <div className="featured-empty-state">
-                  <strong>Featured products are temporarily unavailable.</strong>
-                  <span>Browse the full catalog to continue shopping.</span>
-                  <button className="newsletter-btn" onClick={() => onPageChange('products')}>Shop all footwear</button>
-                </div>
-              )}
-            </div>
-
-            <button 
-              className="carousel-btn carousel-btn-next" 
-              onClick={() => scrollCarousel('right')}
-              aria-label="Next products"
-            >
-              →
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Categories Section */}
-      <section className="categories-section">
-        <div className="container">
-          <div className="section-header">
-            <h2 className="section-title">Find your pair</h2>
-            <p className="section-subtitle">
-              Explore understated classics and standout colour for every wardrobe.
-            </p>
-          </div>
-
-          <div className="categories-grid">
-            <div className="category-card large" onClick={() => onPageChange('men')}>
-              <div className="category-image">
-                <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800" alt="Men's Performance Shoes" />
-                <div className="category-overlay">
-                  <div className="category-content">
-                    <h3 className="category-title">Men's Collection</h3>
-                    <p className="category-description">Engineered for power and speed</p>
-                    <span className="category-count">120+ Styles</span>
-                    <button className="btn-category">Shop Men's</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="category-card large" onClick={() => onPageChange('women')}>
-              <div className="category-image">
-                <img src="https://images.unsplash.com/photo-1515955656352-a1fa3ffcd111?w=800" alt="Women's Performance Shoes" />
-                <div className="category-overlay">
-                  <div className="category-content">
-                    <h3 className="category-title">Women's Collection</h3>
-                    <p className="category-description">Designed for precision and agility</p>
-                    <span className="category-count">95+ Styles</span>
-                    <button className="btn-category">Shop Women's</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="category-card small" onClick={() => onPageChange('new-arrivals')}>
-              <div className="category-image">
-                <img src="https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400" alt="New Arrivals" />
-                <div className="category-overlay">
-                  <div className="category-content">
-                    <h3 className="category-title">New Arrivals</h3>
-                    <button className="btn-category-small">Shop Now</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="category-card small" onClick={() => onPageChange('sale')}>
-              <div className="category-image">
-                <img src="https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400" alt="Sale Items" />
-                <div className="category-overlay">
-                  <div className="category-content">
-                    <h3 className="category-title">Sale</h3>
-                    <span className="sale-badge">Up to 40% Off</span>
-                    <button className="btn-category-small">Shop Sale</button>
-                  </div>
-                </div>
+                  SHOP WOMEN'S EDIT
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => onPageChange('men')} 
+                  className="btn-secondary"
+                  aria-label="Shop men's collection"
+                >
+                  SHOP MEN'S EDIT
+                </button>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="features-section">
-        <div className="container">
-          <div className="features-grid">
-            <div className="feature-item">
-              <div className="feature-icon">🚚</div>
-              <h3 className="feature-title">Free Shipping</h3>
-              <p className="feature-description">Free delivery on orders over ₹15,000</p>
-            </div>
-            <div className="feature-item">
-              <div className="feature-icon">↩️</div>
-              <h3 className="feature-title">Easy Returns</h3>
-              <p className="feature-description">30-day hassle-free returns</p>
-            </div>
-            <div className="feature-item">
-              <div className="feature-icon">🔒</div>
-              <h3 className="feature-title">Secure Payment</h3>
-              <p className="feature-description">Your data is always protected</p>
-            </div>
-            <div className="feature-item">
-              <div className="feature-icon">⚡</div>
-              <h3 className="feature-title">Performance Tested</h3>
-              <p className="feature-description">Lab-verified technology</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Newsletter Section */}
-      <section className="newsletter-section">
-        <div className="container">
-          <div className="newsletter-content">
-            <h2 className="newsletter-title">The SoleVibe edit</h2>
-            <p className="newsletter-description">
-              Explore considered footwear, seasonal colour, and everyday pairs selected for your rotation.
-            </p>
-            <div className="newsletter-form">
-              <button className="newsletter-btn" onClick={() => onPageChange('products')}>
-                Shop all footwear
+      {/* 8. Best Sellers Showcase (Filtered Real Products from MongoDB) */}
+      {bestSellers.length > 0 && (
+        <section className="home-section best-sellers-section" aria-label="Best Selling Footwear">
+          <div className="container">
+            <div className="section-header-row">
+              <div>
+                <span className="telemetry-label section-eyebrow">CUSTOMER FAVORITES</span>
+                <h2 className="headline-lg section-heading">RUNNER's CHOICE BEST SELLERS</h2>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => onPageChange('shop')} 
+                className="btn-link-action"
+                aria-label="View all best selling shoes"
+              >
+                <span>View All Pairs</span>
+                <span className="arrow-icon" aria-hidden="true">→</span>
               </button>
             </div>
+
+            <div className="product-showcase-grid">
+              {bestSellers.map((product, idx) => (
+                <ProductCard
+                  key={product.id || product._id}
+                  product={product}
+                  index={idx}
+                  onProductClick={handleProductCardClick}
+                  isInWishlist={wishlist.some(w => (w.id || w._id) === (product.id || product._id))}
+                  onToggleWishlist={onToggleWishlist}
+                  onQuickView={onQuickView}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 9. Verified Customer Reviews (Dynamic from MongoDB) */}
+      <section className="home-section testimonials-section" aria-label="Customer Reviews">
+        <div className="container">
+          <div className="section-header-row">
+            <div>
+              <span className="telemetry-label section-eyebrow">VERIFIED REVIEWS</span>
+              <h2 className="headline-lg section-heading">COMMUNITY REVIEWS</h2>
+            </div>
+            <div className="aggregate-rating-badge">
+              <span className="star-icon" aria-hidden="true">★★★★★</span>
+              <span className="rating-score">APPROVED RUNNER REVIEWS</span>
+            </div>
+          </div>
+
+          <div className="testimonials-grid">
+            {reviewsLoading ? (
+              [1, 2, 3].map(i => (
+                <div key={i} className="testimonial-card" style={{ opacity: 0.6 }}>
+                  <div className="testimonial-stars">★★★★★</div>
+                  <p className="body-md testimonial-text">Loading verified community reviews...</p>
+                </div>
+              ))
+            ) : approvedReviews.length > 0 ? (
+              approvedReviews.slice(0, 3).map((rev) => (
+                <div key={rev._id} className="testimonial-card">
+                  <div className="testimonial-stars" aria-label={`${rev.rating} out of 5 stars`}>
+                    {'★'.repeat(Math.round(rev.rating || 5))}
+                  </div>
+                  <p className="body-md testimonial-text">
+                    "{rev.comment || rev.title || 'Great comfort, fit, and support for daily running.'}"
+                  </p>
+                  <div className="testimonial-footer">
+                    <div className="author-info">
+                      <span className="author-name">{rev.user?.name || 'Verified Athlete'}</span>
+                      <span className="author-role">
+                        {rev.isVerifiedPurchase === true ? 'Verified Purchase' : 'Customer Review'}
+                      </span>
+                    </div>
+                    <span className="shoe-tag badge-telemetry">
+                      {rev.product?.name ? rev.product.name.replace('SoleVibe ', '') : 'SoleVibe Runner'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="testimonial-card" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>
+                <p className="body-md" style={{ color: 'var(--text-secondary)' }}>
+                  Our verified reviews are being updated. Be the first to review your pair!
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Trust Indicators */}
-      <section className="trust-section">
+      {/* 10. Direct Newsletter Subscription Box */}
+      <section className="home-section newsletter-club-section" aria-label="Join SoleVibe Roster">
         <div className="container">
-          <div className="trust-grid">
-            <div className="trust-item">
-              <span className="trust-number">50K+</span>
-              <span className="trust-label">Happy Athletes</span>
-            </div>
-            <div className="trust-item">
-              <span className="trust-number">98%</span>
-              <span className="trust-label">Satisfaction Rate</span>
-            </div>
-            <div className="trust-item">
-              <span className="trust-number">120+</span>
-              <span className="trust-label">Countries Shipped</span>
-            </div>
-            <div className="trust-item">
-              <span className="trust-number">4.9★</span>
-              <span className="trust-label">Average Rating</span>
-            </div>
+          <div className="newsletter-club-card">
+            <span className="telemetry-label section-eyebrow">SOLEVIBE ATHLETE ROSTER</span>
+            <h2 className="headline-lg newsletter-club-title">JOIN THE SOLEVIBE MOVEMENT</h2>
+            <p className="body-md newsletter-club-desc">
+              Subscribe for early access to seasonal product drops, training insights, and member-exclusive events.
+            </p>
+
+            <form onSubmit={handleNewsletterSubmit} className="club-form-row">
+              <input 
+                type="email" 
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                placeholder="Enter your runner email address..." 
+                className="input-field club-email-input"
+                aria-label="Enter your runner email address"
+                required
+                disabled={newsletterLoading}
+              />
+              <button 
+                type="submit" 
+                className="btn-primary club-submit-btn"
+                aria-label="Subscribe to SoleVibe newsletter"
+                disabled={newsletterLoading}
+              >
+                <span>{newsletterLoading ? 'SUBSCRIBING…' : 'GET PRIORITY ACCESS'}</span>
+                <span className="arrow-icon" aria-hidden="true">→</span>
+              </button>
+            </form>
+
+            {newsletterMessage && (
+              <p 
+                className="club-success-note" 
+                style={{ color: newsletterStatus === 'success' ? 'var(--color-success)' : 'var(--color-danger)' }}
+                role="status"
+              >
+                {newsletterStatus === 'success' ? '✓ ' : '⚠ '}{newsletterMessage}
+              </p>
+            )}
           </div>
         </div>
       </section>
-    </section>
+    </div>
   );
 }
 

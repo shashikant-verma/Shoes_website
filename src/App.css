@@ -3,20 +3,32 @@
 .App {
   width: 100%;
   min-height: 100vh;
-  background: var(--background);
-  color: var(--on-background);
+  background: var(--bg-page);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
 }
 
 /* Utility Classes */
 .container {
-  max-width: 1400px;
+  max-width: var(--max-width);
   margin: 0 auto;
   padding: 0 var(--gutter);
+  width: 100%;
 }
 
 @media (max-width: 768px) {
+  .App {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 12px));
+  }
+
   .container {
     padding: 0 var(--gutter-mobile);
+  }
+
+  /* Prevent iOS Safari auto-zoom on form focus */
+  input, select, textarea {
+    font-size: 16px !important;
   }
 }
 

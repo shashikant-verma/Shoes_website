@@ -38,7 +38,8 @@ function CustomerSupportModal({ topic = 'faq', onClose }) {
             <h2 className="headline-md">SHIPPING & DELIVERY POLICY</h2>
             <p>SoleVibe provides fast and secure shipping nationwide across India.</p>
             <ul className="policy-bullet-list">
-              <li><strong>Free Shipping Threshold:</strong> Orders above ₹2,000 qualify for 100% FREE Standard Shipping.</li>
+              <li><strong>Free Shipping Threshold:</strong> Orders above ₹15,000 qualify for 100% FREE Standard Shipping. Orders below threshold incur a standard ₹150 delivery charge.</li>
+              <li><strong>Express Courier Option:</strong> Express courier delivery is available for ₹350 with expedited 1-2 business day dispatch.</li>
               <li><strong>Standard Delivery SLA:</strong> Orders are dispatched within 24 hours and delivered in 3-5 business days.</li>
               <li><strong>Order Tracking:</strong> Live real-time tracking is provided for every order in your Order History.</li>
               <li><strong>Secure Packaging:</strong> Every pair is shipped in eco-conscious, impact-resistant protective boxes.</li>
@@ -51,10 +52,10 @@ function CustomerSupportModal({ topic = 'faq', onClose }) {
             <h2 className="headline-md">RETURNS & REFUNDS POLICY</h2>
             <p>We want you to love your SoleVibe footwear. If it's not the perfect fit, we make returns simple.</p>
             <ul className="policy-bullet-list">
-              <li><strong>14-Day Return Window:</strong> You may request a return within 14 days of order delivery.</li>
+              <li><strong>7-Day Return Policy:</strong> You may request a return within 7 days of order delivery.</li>
               <li><strong>Condition Requirement:</strong> Items must be unworn, undamaged, with original tags and packaging intact.</li>
               <li><strong>Hassle-Free Doorstep Pickup:</strong> Our courier partners will pick up the item directly from your address.</li>
-              <li><strong>Instant Refund Credit:</strong> Once verified by our warehouse team, refunds are processed back to your original payment method or store credit.</li>
+              <li><strong>Secure Refund Processing:</strong> Once verified by our warehouse team, refunds are processed back to your original payment method.</li>
             </ul>
           </div>
         )}

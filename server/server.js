@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
 const dotenv = require('dotenv');
 const path = require('path');
 
@@ -20,6 +21,10 @@ const inventoryRoutes = require('./routes/inventoryRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const shippingRoutes = require('./routes/shippingRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const settingsRoutes = require('./routes/settingsRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
+const newsletterRoutes = require('./routes/newsletterRoutes');
 const { startAbandonedCartScheduler } = require('./services/abandonedCartService');
 
 // Import middleware
@@ -31,7 +36,12 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 const app = express();
 const PORT = process.env.PORT || 5001; // Use environment variable or default to 5001
 
-// Middleware
+// Security headers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// CORS Middleware
 app.use(cors({
   origin: [
     process.env.CLIENT_URL || 'http://localhost:3000',
@@ -47,6 +57,9 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Serve static upload assets
+app.use('/uploads', express.static(path.resolve(__dirname, '../public/uploads')));
+
 // Connect to MongoDB
 const connectDB = require('./config/db');
 connectDB();
@@ -54,6 +67,9 @@ connectDB();
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/upload', uploadRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin/customers', userRoutes);
 app.use('/api/orders', orderRoutes);
@@ -68,6 +84,7 @@ app.use('/api/admin/inventory', inventoryRoutes);
 app.use('/api/admin/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/shipping', shippingRoutes);
+app.use('/api/newsletter', newsletterRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -102,9 +119,7 @@ const server = app.listen(PORT, '0.0.0.0', (err) => {
 // Handle server errors
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`❌ Port ${PORT} is already in use. Please run:`);
-    console.error(`   • Kill the process: taskkill /F /IM node.exe`);
-    console.error(`   • Or use a different port: set PORT=5002 && npm run server`);
+    console.error(`❌ Port ${PORT} is already in use.`);
   } else {
     console.error('❌ Server error:', err.message);
   }
@@ -127,7 +142,6 @@ process.on('SIGINT', () => {
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error.message);
   console.error(error.stack);
-  // Log the error but don't exit in production
   if (process.env.NODE_ENV === 'development') {
     process.exit(1);
   }
@@ -136,21 +150,9 @@ process.on('uncaughtException', (error) => {
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  // Log the error but don't exit in production
   if (process.env.NODE_ENV === 'development') {
     process.exit(1);
   }
 });
 
-// Monitor MongoDB connection
-mongoose.connection.on('disconnected', () => {
-  console.error('⚠️ MongoDB disconnected! Attempting to reconnect...');
-});
-
-mongoose.connection.on('reconnected', () => {
-  console.log('✅ MongoDB reconnected successfully');
-});
-
-mongoose.connection.on('error', (error) => {
-  console.error('❌ MongoDB connection error:', error.message);
-});
+module.exports = app;
